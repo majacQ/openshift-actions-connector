@@ -44,7 +44,7 @@ serverImage: quay.io/tetchell/openshift-actions-connector
 serverTag: latest
 
 serverServiceName: actions-connector
-serverHttpPort: 8080
+serverHttpPort: 3003
 serverHttpPortName: server-http
-serverHttpsPort: 8443
+serverHttpsPort: 3443
 serverHttpsPortName: server-https
