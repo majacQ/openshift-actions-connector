@@ -20,15 +20,18 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    // "noUnusedLocals": true,
+    "noUnusedLocals": true,
     // "noUnusedParameters": true,
     "noImplicitReturns": true,
+    "noImplicitOverride": true,
     "noFallthroughCasesInSwitch": true,
     "allowSyntheticDefaultImports": true
   },
   "include": [
-    "src",
-    "webpack.config.server.ts"
+    "./src",
+    "./webpack.config.*",
+    // "console-extensions.json",
+    "./package.json"
   ],
   "exclude": [
     "src/server"

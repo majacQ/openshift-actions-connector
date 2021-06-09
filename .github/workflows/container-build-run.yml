@@ -42,7 +42,6 @@ jobs:
           echo "View output in Logs step below"
           sleep 10
 
-          yarn wait-on -l tcp:3000 -t 60000
           yarn wait-on -l tcp:3003 -t 60000
 
       - name: Podman inspect
@@ -54,7 +53,6 @@ jobs:
         run: |
           set -eEx
           podman ps
-          curl -sSf http://localhost:3000
           curl -sSf http://localhost:3003
 
       - name: Push container image

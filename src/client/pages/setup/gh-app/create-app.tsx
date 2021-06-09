@@ -1,15 +1,18 @@
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
 import React, { useState } from "react";
-import { Button, Card } from "react-bootstrap";
+import {
+  Button, Card, CardTitle, CardBody, Checkbox,
+} from "@patternfly/react-core";
 import { v4 as uuid } from "uuid";
 
+import {
+  BookOpenIcon, ExclamationTriangleIcon, GithubIcon, PlusIcon,
+} from "@patternfly/react-icons";
 import ApiEndpoints from "../../../../common/api-endpoints";
 import ApiRequests from "../../../../common/api-requests";
 import Banner from "../../../components/banner";
 import { ExternalLink } from "../../../components/external-link";
-import BtnBody from "../../../components/fa-btn-body";
-import FormInputCheck from "../../../components/form-input-check";
+import BtnBody from "../../../components/btn-body";
 import { getWindowLocationNoPath, fetchJSON } from "../../../util/client-util";
 import { getGitHubAppManifest } from "../../../util/github-app-manifest";
 
@@ -31,25 +34,25 @@ export default function CreateAppCard(): JSX.Element {
   return (
     <React.Fragment>
       <Card>
-        <Card.Title>
+        <CardTitle>
           {CREATE_NEW_TITLE}
 
-          <Button variant="info" className="ml-auto">
-            <ExternalLink href="https://github.com/settings/apps/" icon={{ icon: [ "fab", "github" ], position: "left" }} >
+          <Button variant="tertiary" className="ml-auto">
+            <ExternalLink href="https://github.com/settings/apps/" icon={{ icon: GithubIcon, position: "left" }} >
               View your apps
             </ExternalLink>
           </Button>
-        </Card.Title>
-        <Card.Body>
-          <div className="border-bottom px-2">
-            <FormInputCheck type="checkbox"
-              checked={publicChecked}
+        </CardTitle>
+        <CardBody>
+          <div>
+            <Checkbox
+              id="public-app"
+              isChecked={publicChecked}
               onChange={(checked) => setPublicChecked(checked)}
-            >
-              Public app
-            </FormInputCheck>
+              label="Public app"
+            />
             <p className={classNames({ "d-none": publicChecked })}>
-              <FontAwesomeIcon icon="exclamation-triangle" className="text-warning mr-2"/>
+              <ExclamationTriangleIcon className="text-warning mr-2"/>
               If you make your app private, no one else will be able to install it.
             </p>
             <p>
@@ -65,14 +68,14 @@ export default function CreateAppCard(): JSX.Element {
             </p>
             <p className="my-3">
               <ExternalLink href="https://docs.github.com/en/developers/apps/making-a-github-app-public-or-private"
-                icon={{ icon: "book-open", position: "left" }}
+                icon={{ icon: BookOpenIcon, position: "left" }}
               >
                 Read more about public and private apps.
               </ExternalLink>
             </p>
           </div>
 
-          <div className="d-flex flex-column align-items-center my-4">
+          <div className="d-flex flex-column align-items-center my-3">
             <form className="" id={manifestFormId} method="post" action={githubManifestUrl} onSubmit={
               async (e) => {
                 e.preventDefault();
@@ -100,15 +103,15 @@ export default function CreateAppCard(): JSX.Element {
               <input id={manifestInputId} className="d-none" name="manifest" type="manifest" readOnly={true} />
             </form>
 
-            <Button size="lg" type="submit" form={manifestFormId}>
-              <BtnBody icon="plus" text={CREATE_NEW_TITLE} isLoading={isLoading} />
+            <Button type="submit" className="mt-2" form={manifestFormId}>
+              <BtnBody icon={PlusIcon} text={CREATE_NEW_TITLE} isLoading={isLoading} />
             </Button>
 
           </div>
 
           <Banner title={error ?? ""} display={error != null} severity="danger" />
 
-        </Card.Body>
+        </CardBody>
       </Card>
     </React.Fragment>
   );

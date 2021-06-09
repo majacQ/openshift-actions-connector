@@ -1,19 +1,26 @@
 import React, { useState } from "react";
-import { Button } from "react-bootstrap";
+import {
+  Button,
+  Title,
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@patternfly/react-core";
 import classNames from "classnames";
 
+import { BookIcon, UserIcon, UsersIcon } from "@patternfly/react-icons";
 import AppPageCard from "../components/gh-app-page-card";
 import DataFetcher from "../components/data-fetcher";
 import ApiEndpoints from "../../common/api-endpoints";
-import BtnBody from "../components/fa-btn-body";
+import BtnBody from "../components/btn-body";
 import ApiResponses from "../../common/api-responses";
 import ClientPages from "./client-pages";
 import { fetchJSON, getSearchParam } from "../util/client-util";
 import SetupPageHeader, { SETUP_QUERYPARAM } from "./setup/setup-header";
 import { ExternalLink } from "../components/external-link";
+import { CommonIcons } from "../util/icons";
 
-const DOCS_ICON = "book";
-const EDIT_ICON = "cog";
+const DOCS_ICON = BookIcon;
+const EDIT_ICON = CommonIcons.Configure;
 
 type ViewType = "owner" | "user";
 
@@ -43,13 +50,14 @@ function GitHubAppPageBody({
 }: {
   data: ApiResponses.UserAppState, reload: () => Promise<void>, isSetup: boolean,
 }): JSX.Element {
+
+  const [ viewType, setViewType ] = useState<ViewType>();
+
   if (!data.success) {
     return (
       <NoApp />
     );
   }
-
-  const [ viewType, setViewType ] = useState<ViewType>();
 
   if (!viewType) {
     if (data.installed) {
@@ -63,12 +71,12 @@ function GitHubAppPageBody({
   return (
     <React.Fragment>
       <div className="d-flex align-items-center my-4">
-        <h2 className="m-0">
-          <ExternalLink className="text-light" href={data.appData.html_url}>
+        <Title headingLevel="h2" className="m-0">
+          <ExternalLink href={data.appData.html_url}>
             {data.appData.name}
           </ExternalLink>
           {/* The app avatar can be fetched from /identicons/app/app/<slug> */}
-        </h2>
+        </Title>
 
         <div className="ml-auto"></div>
 
@@ -79,27 +87,25 @@ function GitHubAppPageBody({
               await reload();
             }
           }>
-            <BtnBody icon="times" text="Unbind"/>
+            <BtnBody icon={CommonIcons.Delete} text="Unbind"/>
           </Button>
           <Button onClick={() => reload()}>
-            <BtnBody icon="sync-alt" text="Refresh"/>
+            <BtnBody icon={CommonIcons.Reload} text="Reload"/>
           </Button>
         </div>
       </div>
 
       <div className="my-3 d-flex align-items-center">
-        <h5 className="my-3">
-          <DataFetcher type="api" endpoint={ApiEndpoints.User.Root} loadingDisplay="text">{
-            (userRes: ApiResponses.GitHubUserResponse) => {
-              return (
-                <React.Fragment>
-                  Logged in as <ExternalLink href={userRes.html_url}>{userRes.login}</ExternalLink>
-                </React.Fragment>
-              );
-            }
+        <DataFetcher type="api" endpoint={ApiEndpoints.User.Root} loadingDisplay="text">{
+          (userRes: ApiResponses.GitHubUserResponse) => {
+            return (
+              <Title headingLevel="h4" className="d-flex">
+                Logged in as&nbsp;<ExternalLink href={userRes.html_url}>{userRes.login}</ExternalLink>
+              </Title>
+            );
           }
-          </DataFetcher>
-        </h5>
+        }
+        </DataFetcher>
         <div className="ml-auto">
           {
             data.installed && data.owned ?
@@ -127,14 +133,18 @@ function SwitchViewButton(props: { currentView: ViewType | undefined, onSwitchVi
   const isUserActive = !isOwnerActive;
 
   return (
-    <div className="btn-line">
-      <Button variant="info" active={isOwnerActive} onClick={() => props.onSwitchViewType("owner")} className="mr-2">
-        <BtnBody text="View as owner" />
-      </Button>
-      <Button variant="info" active={isUserActive} onClick={() => props.onSwitchViewType("user")}>
-        <BtnBody text="View as user" />
-      </Button>
-    </div>
+    <ToggleGroup>
+      <ToggleGroupItem text="View as owner"
+        icon={<UserIcon />}
+        onChange={() => props.onSwitchViewType("owner")}
+        isSelected={isOwnerActive}
+      />
+      <ToggleGroupItem text="View as user"
+        icon={<UsersIcon />}
+        onChange={() => props.onSwitchViewType("user")}
+        isSelected={isUserActive}
+      />
+    </ToggleGroup>
   );
 }
 

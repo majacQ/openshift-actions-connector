@@ -1,24 +1,27 @@
 import React, { useState, useRef } from "react";
 import classNames from "classnames";
 import {
-  Card, Form, Col, Button, Table,
-} from "react-bootstrap";
+  Card, CardBody, CardTitle, Checkbox,
+  Form, FormGroup, Button, TextInput, FormSelect,
+} from "@patternfly/react-core";
+import { Table } from "@patternfly/react-table";
 import { v4 as uuid } from "uuid";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
+import {
+  ExternalLinkAltIcon, PlusIcon, SyncAltIcon, TimesIcon,
+} from "@patternfly/react-icons";
 import ImageRegistry from "../../common/types/image-registries";
 import { ExternalLink } from "../components/external-link";
 import { TooltipIcon } from "../components/tooltip-icon";
 import ApiResponses from "../../common/api-responses";
 import Banner from "../components/banner";
-import BtnBody from "../components/fa-btn-body";
+import BtnBody from "../components/btn-body";
 import { fetchJSON } from "../util/client-util";
 import ApiEndpoints from "../../common/api-endpoints";
 import ApiRequests from "../../common/api-requests";
 import SetupPageHeader from "./setup/setup-header";
 import DataFetcher from "../components/data-fetcher";
 import { containsBannedCharacters } from "../../common/common-util";
-import FormInputCheck from "../components/form-input-check";
 
 export default function ImageRegistriesPage(): JSX.Element {
 
@@ -32,7 +35,7 @@ export default function ImageRegistriesPage(): JSX.Element {
           return (
             <React.Fragment>
               <Card>
-                <Card.Title>
+                <CardTitle>
                   <div>
                   Container Image Registries
                   </div>
@@ -41,11 +44,11 @@ export default function ImageRegistriesPage(): JSX.Element {
                     <Button variant="primary"
                       onClick={reload}
                     >
-                      <BtnBody icon="sync-alt" text="Reload"/>
+                      <BtnBody icon={SyncAltIcon} text="Reload"/>
                     </Button>
                   </div>
-                </Card.Title>
-                <Card.Body>
+                </CardTitle>
+                <CardBody>
                   {
                     (() => {
                       if (!registriesRes.success) {
@@ -66,7 +69,7 @@ export default function ImageRegistriesPage(): JSX.Element {
                       }
 
                       return (
-                        <Table striped bordered variant="dark">
+                        <Table borders={true}>
                           <thead className="">
                             {/* <colgroup className="row">
                               <col className="col-2"></col>
@@ -99,7 +102,7 @@ export default function ImageRegistriesPage(): JSX.Element {
                       );
                     })()
                   }
-                </Card.Body>
+                </CardBody>
               </Card>
 
               <CreateImageRegistryCard onChange={reload}/>
@@ -127,7 +130,7 @@ function ImageRegistryRow({ registry, onChange }: { registry: ImageRegistry.Info
           {registry.fullPath}
         </div>
         <div className="text-right">
-          <ExternalLink href={"https://" + registry.fullPath} icon={{ position: "right", icon: "external-link-alt" }} />
+          <ExternalLink href={"https://" + registry.fullPath} icon={{ position: "right", icon: ExternalLinkAltIcon }} />
         </div>
       </td>
       <td >{registry.username}</td>
@@ -148,7 +151,7 @@ function ImageRegistryRow({ registry, onChange }: { registry: ImageRegistry.Info
             setIsDeleting(false);
           }
         }}>
-          <BtnBody icon="times" title="Remove" isLoading={isDeleting}/>
+          <BtnBody icon={TimesIcon} title="Remove" isLoading={isDeleting}/>
         </Button>
       </td>
     </tr>
@@ -169,6 +172,7 @@ function CreateImageRegistryCard({ onChange }: { onChange: () => Promise<void> }
     username: "",
   });
 
+  // helper function to set partial registry info and maintain the rest
   const setRegistryInfo = (reg: Partial<typeof registryInfo>) => {
     setRegistryInfo_({
       ...registryInfo,
@@ -184,10 +188,10 @@ function CreateImageRegistryCard({ onChange }: { onChange: () => Promise<void> }
 
   return (
     <Card>
-      <Card.Title>
+      <CardTitle>
         Add an Image Registry
-      </Card.Title>
-      <Card.Body>
+      </CardTitle>
+      <CardBody>
         <p>
           The starter workflow requires a Container Image Registry to push built images to, and pull images from.
         </p>
@@ -238,28 +242,28 @@ function CreateImageRegistryCard({ onChange }: { onChange: () => Promise<void> }
               setIsSubmitting(false);
             }
           }}>
-            <Form.Row>
-              <Form.Group as={Col}>
-                <Form.Label>
-                  Registry
-                </Form.Label>
-                <Form.Control as="select" onChange={(e) => {
-                  const type = e.currentTarget.value as ImageRegistry.Type;
-                  const reg = ImageRegistry.Registries[type];
+            <div>
+              <FormGroup fieldId="registry" label="Registry">
+                <FormSelect
+                  aria-label="Registry"
+                  value={registryInfo.type}
+                  onChange={(value) => {
+                    const type = value as ImageRegistry.Type;
+                    const reg = ImageRegistry.Registries[type];
 
-                  const isGhcr = type === "GHCR";
-                  const ghcrUseGitHubToken = registryInfo.ghcrUseGitHubToken && isGhcr;
-                  // setRegistryType(type);
+                    const isGhcr = type === "GHCR";
+                    const ghcrUseGitHubToken = registryInfo.ghcrUseGitHubToken && isGhcr;
+                    // setRegistryType(type);
 
-                  if (!reg.hostname) {
-                    setShowHostnameInput(true);
-                    setRegistryInfo({ type, hostname: "", ghcrUseGitHubToken });
-                  }
-                  else {
-                    setShowHostnameInput(false);
-                    setRegistryInfo({ type, hostname: reg.hostname, ghcrUseGitHubToken });
-                  }
-                }}
+                    if (!reg.hostname) {
+                      setShowHostnameInput(true);
+                      setRegistryInfo({ type, hostname: "", ghcrUseGitHubToken });
+                    }
+                    else {
+                      setShowHostnameInput(false);
+                      setRegistryInfo({ type, hostname: reg.hostname, ghcrUseGitHubToken });
+                    }
+                  }}
                 >
                   {
                     Object.entries(ImageRegistry.Registries).map(([ type, reg ]) => {
@@ -267,175 +271,156 @@ function CreateImageRegistryCard({ onChange }: { onChange: () => Promise<void> }
                         <option
                           value={type}
                           key={type}
-                          title=""
+                          title={reg.description}
                         >
                           {reg.description} {reg.hostname ? `(${reg.hostname})` : ""}
                         </option>
                       );
                     })
                   }
-                </Form.Control>
-              </Form.Group>
+                </FormSelect>
+              </FormGroup>
 
-              <Form.Group as={Col}>
-                <Form.Label>
-                  Namespace
+              <FormGroup
+                fieldId="namespace"
+                label="Namespace"
+                labelIcon={
                   <TooltipIcon title="Registry Namespace" body={(
                     <React.Fragment>
                       <p>
-                         The namespace is the first segment of the registry path, between the first and second slashes.
+                       The namespace is the first segment of the registry path, between the first and second slashes.
                       </p>
                       <p>
-                         For example, for the image path <br/>
+                       For example, for the image path<br/>&quot;
                         <span className="">ghcr.io/</span>
-                        <span className="font-weight-bold">redhat-actions</span>/my-image:latest
+                        <span className="b">redhat-actions</span>/my-image:latest&quot;
                       </p>
                       <p>
-                         The registry hostname is {`"ghcr.io"`}.
-                      </p>
-                      <p>
-                         The namespace is <span className="font-weight-bold">{`"redhat-actions"`}</span>.
+                       The registry hostname is &quot;ghcr.io&quot;, and
+                       the namespace is <span className="b">&quot;redhat-actions&quot;</span>.
                       </p>
                     </React.Fragment>
-                  )} />
-                </Form.Label>
-                <Form.Control type="text"
-                  isValid={registryInfo.namespace.length > 0 && !containsBannedCharacters(registryInfo.namespace)}
-                  isInvalid={containsBannedCharacters(registryInfo.namespace)}
+                  )}
+                  />
+                }
+                validated={validateNoBannedCharacters(registryInfo.namespace)}
+                helperTextInvalid={registryInfo.namespace.length > 0 ? "The namespace contains illegal characters." : undefined}
+              >
+                <TextInput
+                  aria-label="Namespace"
                   defaultValue={registryInfo.namespace}
-                  onChange={(e) => {
-                    const namespace = e.currentTarget.value;
+                  onChange={(value) => {
+                    const namespace = value;
                     const username = userNameIsNamespace ? namespace : registryInfo.username;
                     setRegistryInfo({ namespace, username });
                   }}
                 />
-                <Form.Control.Feedback type="invalid">
-                  The namespace contains illegal characters.
-                </Form.Control.Feedback>
-              </Form.Group>
-            </Form.Row>
+              </FormGroup>
+            </div>
 
-            <Form.Row className={classNames({ "d-none": !showHostnameInput })}>
-              <Form.Group as={Col} className="col-6">
-                <Form.Label>
-                  Hostname
-                </Form.Label>
-                <Form.Control
-                  type="text"
-                  onChange={(e) => {
-                    setRegistryInfo({ hostname: e.currentTarget.value });
+            <div className={classNames({ "d-none": !showHostnameInput })}>
+              <FormGroup fieldId="hostname" label="Hostname" validated={validateNoBannedCharacters(registryInfo.hostname)}>
+                <TextInput
+                  aria-label="Hostname"
+                  onChange={(value) => {
+                    setRegistryInfo({ hostname: value });
                   }}
-                  isValid={validateHostname(registryInfo.hostname)}
                 />
-                <Form.Control.Feedback type="invalid">
-                  Enter the {"registry's"} hostname.
-                </Form.Control.Feedback>
-              </Form.Group>
-            </Form.Row>
+              </FormGroup>
+            </div>
 
-            <Form.Row>
-              <Form.Group as={Col} className="col-6">
-                <Form.Label>
-                  Registry Path
-                  <TooltipIcon body={(
-                    <React.Fragment>
-                      <p>Registry Path is the Registry plus the Namespace, separated by a slash.</p>
-                      <p>Use the fields above to change the Registry Path.</p>
-                    </React.Fragment>
-                  )}/>
-                </Form.Label>
-                <Form.Control
-                  readOnly={true}
+            <div>
+              <FormGroup fieldId="registry-path" label="Registry Path" labelIcon={
+                <TooltipIcon body={(
+                  <>
+                    <p>Registry Path is the Registry plus the Namespace, separated by a slash.</p>
+                    <p>Use the fields above to change the Registry Path.</p>
+                  </>
+                )}
+                />
+              }>
+                <TextInput
+                  aria-label="Registry Path"
+                  isReadOnly
                   value={registryInfo.hostname ? `${registryInfo.hostname}/${registryInfo.namespace}` : ""}
                 />
-              </Form.Group>
-            </Form.Row>
+              </FormGroup>
+            </div>
 
             <hr/>
 
-            <Form.Row className="d-flex align-items-center">
-              <Form.Group as={Col} className="col-6">
-                <Form.Label>
-                  Username
-                </Form.Label>
-                <Form.Control type="text"
-                  isValid={registryInfo.username.length > 0 && !containsBannedCharacters(registryInfo.username, true)}
-                  isInvalid={containsBannedCharacters(registryInfo.username, true)}
-                  defaultValue={userNameIsNamespace ? registryInfo.namespace : registryInfo.username}
-                  readOnly={userNameIsNamespace}
-                  title={userNameIsNamespace ? "Username is same as namespace" : ""}
-                  onChange={(e) => { setRegistryInfo({ username: e.currentTarget.value }); }}
-                />
-              </Form.Group>
-              <Form.Group className="pl-3 b">
-                <Form.Label>
-                  &nbsp;  {/* eh */}
-                </Form.Label>
-                <FormInputCheck
-                  type="checkbox"
-                  checked={userNameIsNamespace}
-                  onChange={(checked) => { setUserNameIsNamespace(checked); }}
-                >
-                  Username same as namespace
-                </FormInputCheck>
-              </Form.Group>
+            <FormGroup
+              isInline
+              fieldId="username"
+              label="Username"
+              validated={validateNoBannedCharacters(registryInfo.username)}
+            >
+              <TextInput
+                className="col-6"
+                defaultValue={userNameIsNamespace ? registryInfo.namespace : registryInfo.username}
+                isReadOnly={userNameIsNamespace}
+                title={userNameIsNamespace ? "Username is same as namespace" : ""}
+                onChange={(value) => { setRegistryInfo({ username: value }); }}
+              />
+              <Checkbox
+                label="Username same as namespace"
+                id="username-same-as-namespace"
+                isChecked={userNameIsNamespace}
+                onChange={(checked) => { setUserNameIsNamespace(checked); }}
+              />
+            </FormGroup>
 
-            </Form.Row>
+            <FormGroup
+              isInline
+              fieldId="password-or-token"
+              label="Password or Token"
+            >
+              <TextInput
+                className="col-6"
+                type="password"
+                isReadOnly={registryInfo.ghcrUseGitHubToken}
+                value={registryInfo.passwordOrToken}
+                onChange={(value) => { setRegistryInfo({ passwordOrToken: value }); }}
+              />
 
-            <Form.Row>
-              <Form.Group as={Col} className="col-6">
-                <Form.Label>
-                  Password or Token
-                </Form.Label>
-                <Form.Control type="password"
-                  isValid={undefined}
-                  isInvalid={undefined}
-                  readOnly={registryInfo.ghcrUseGitHubToken}
-                  value={registryInfo.passwordOrToken}
-                  onChange={(e) => { setRegistryInfo({ passwordOrToken: e.currentTarget.value }); }}
-                />
-
-              </Form.Group>
-
-              <Form.Group className={classNames("pl-3 b", { "d-none": registryInfo.type !== "GHCR" })}>
-                <Form.Label>
-                  &nbsp;  {/* eh */}
-                </Form.Label>
-
-                <FormInputCheck
-                  type="checkbox"
-                  checked={registryInfo.ghcrUseGitHubToken ?? false}
-                  onChange={(checked) => { setRegistryInfo({ ghcrUseGitHubToken: checked, passwordOrToken: "" }); }}
-                >
-                  <React.Fragment>
+              <Checkbox
+                label={
+                  <div className="d-flex align-items-center">
                     Use built-in Actions workflow token
                     <ExternalLink
                       className="mx-2"
                       href="https://docs.github.com/en/actions/reference/authentication-in-a-workflow"
                     >
-                      <FontAwesomeIcon icon="question-circle" size="lg" />
+                      <TooltipIcon body="Click to open GitHub Documentation" iconClasses="text-fg" />
                     </ExternalLink>
-                  </React.Fragment>
-                </FormInputCheck>
-              </Form.Group>
-            </Form.Row>
+                  </div>
+                }
+                id="use-github-token"
+                isChecked={registryInfo.ghcrUseGitHubToken ?? false}
+                className={classNames({ "d-none": registryInfo.type !== "GHCR" })}
+                onChange={(checked) => { setRegistryInfo({ ghcrUseGitHubToken: checked, passwordOrToken: "" }); }}
+              />
+            </FormGroup>
 
             <div className="mt-3 d-flex justify-content-center align-items-center">
-              <Button size="lg" type="submit">
-                <BtnBody text="Add Image Registry" icon="plus" />
+              <Button isLarge type="submit">
+                <BtnBody text="Add Image Registry" icon={PlusIcon} />
               </Button>
             </div>
           </Form>
         </div>
 
         <SubmissionStatusBanner bannerId={bannerId()} isSubmitting={isSubmitting} submissionResult={submissionResult}/>
-      </Card.Body>
+      </CardBody>
     </Card>
   );
 }
 
-function validateHostname(hostname: string | undefined): boolean {
-  return hostname != null && hostname.length > 0 && !containsBannedCharacters(hostname);
+function validateNoBannedCharacters(s: string | undefined): "success" | "default" | "error" {
+  if (s == null || s.length === 0) {
+    return "default";
+  }
+  return containsBannedCharacters(s) ? "error" : "success";
 }
 
 function SubmissionStatusBanner(props: {

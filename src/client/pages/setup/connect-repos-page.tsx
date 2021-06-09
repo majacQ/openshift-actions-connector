@@ -4,26 +4,33 @@ import {
   Badge,
   Button,
   Card,
-  Collapse,
+  CardTitle,
+  CardBody,
+  ExpandableSection,
   Spinner,
-  Table,
-} from "react-bootstrap";
+  ExpandableSectionToggle,
+  Checkbox,
+} from "@patternfly/react-core";
+import { Table } from "@patternfly/react-table";
 import classNames from "classnames";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { IconProp } from "@fortawesome/fontawesome-svg-core";
+import {
+  BookOpenIcon, CheckSquareIcon,
+  EditIcon, EyeIcon, EyeSlashIcon,
+  InfoCircleIcon, MinusCircleIcon, MinusSquareIcon,
+} from "@patternfly/react-icons";
 
 import ApiEndpoints from "../../../common/api-endpoints";
 import ApiResponses from "../../../common/api-responses";
 import ApiRequests from "../../../common/api-requests";
 import { ExternalLink } from "../../components/external-link";
 import SetupPageHeader, { SETUP_QUERYPARAM } from "./setup-header";
-import BtnBody from "../../components/fa-btn-body";
+import BtnBody from "../../components/btn-body";
 import { getFriendlyDateTime } from "../../../common/common-util";
 import { fetchJSON, getSearchParam } from "../../util/client-util";
 import Banner from "../../components/banner";
 import { getSecretsUrlForRepo, GitHubRepoId } from "../../../common/types/gh-types";
 import DataFetcher from "../../components/data-fetcher";
-import FormInputCheck from "../../components/form-input-check";
+import { CommonIcons, IconElement } from "../../util/icons";
 
 type ConnectReposPageProps = {};
 
@@ -45,7 +52,7 @@ interface ConnectReposPageState {
 
 export default class ConnectReposPage extends React.Component<RouteComponentProps<ConnectReposPageProps>, ConnectReposPageState> {
 
-  private readonly createSATokensId = "create-tokens-checkbox";
+  // private readonly createSATokensId = "create-tokens-checkbox";
   private readonly bannerId = "create-secrets-status-banner";
 
   constructor(props: RouteComponentProps<ConnectReposPageProps>) {
@@ -58,7 +65,7 @@ export default class ConnectReposPage extends React.Component<RouteComponentProp
     };
   }
 
-  public async componentDidMount() {
+  override async componentDidMount() {
     await this.loadReposSecrets();
   }
 
@@ -117,7 +124,7 @@ export default class ConnectReposPage extends React.Component<RouteComponentProp
   }
 
   // eslint-disable-next-line @typescript-eslint/member-ordering
-  public render(): JSX.Element {
+  override render(): JSX.Element {
     return (
       <React.Fragment>
         {
@@ -126,10 +133,10 @@ export default class ConnectReposPage extends React.Component<RouteComponentProp
             : ""
         }
         <Card>
-          <Card.Title>
+          <CardTitle>
             Connect GitHub Repositories
-          </Card.Title>
-          <Card.Body>
+          </CardTitle>
+          <CardBody>
             <p>
               This step connects GitHub repositories to your OpenShift cluster by
               creating <ExternalLink href="https://docs.github.com/en/actions/reference/encrypted-secrets">
@@ -145,7 +152,7 @@ export default class ConnectReposPage extends React.Component<RouteComponentProp
               <ExternalLink
                 href={"https://github.com/redhat-actions/oc-login/wiki/Using-a-Service-Account-for-GitHub-Actions"}
               >
-                <FontAwesomeIcon fixedWidth icon="book-open" className="text-light mr-2" />
+                <BookOpenIcon className="mr-2" />
                 Read More about using a service account for GitHub Actions
               </ExternalLink>.
             </p>
@@ -170,16 +177,16 @@ export default class ConnectReposPage extends React.Component<RouteComponentProp
               />
               <label htmlFor={this.createSATokensId} className="b clickable">Create Service Account Tokens</label>
             </div> */}
-          </Card.Body>
+          </CardBody>
         </Card>
         <Card>
-          <Card.Title>
+          <CardTitle>
             <div>
               Secrets
             </div>
-          </Card.Title>
-          <Card.Body>
-            <DataFetcher type="api" endpoint={ApiEndpoints.App.Repos.RepoSecretDefaults} loadingDisplay="spinner">
+          </CardTitle>
+          <CardBody>
+            <DataFetcher type="api" endpoint={ApiEndpoints.App.Repos.RepoSecretDefaults} loadingDisplay="card-body">
               {
                 (res: ApiResponses.DefaultSecretsResponse) => (
                   <div>
@@ -205,7 +212,7 @@ export default class ConnectReposPage extends React.Component<RouteComponentProp
                 )
               }
             </DataFetcher>
-          </Card.Body>
+          </CardBody>
         </Card>
 
         <Card>
@@ -214,14 +221,14 @@ export default class ConnectReposPage extends React.Component<RouteComponentProp
             // Failed to load
             ? (
               <React.Fragment>
-                <Card.Title>
+                <CardTitle>
                   Repositories
-                </Card.Title>
-                <Card.Body>
+                </CardTitle>
+                <CardBody>
                   <Banner severity="danger" display={true}
                     title={this.state.loadingErr}
                   />
-                </Card.Body>
+                </CardBody>
               </React.Fragment>
             ) : (
               <React.Fragment>
@@ -230,20 +237,20 @@ export default class ConnectReposPage extends React.Component<RouteComponentProp
                 // still loading
                   ? (
                     <React.Fragment>
-                      <Card.Title>
+                      <CardTitle>
                         Repositories
-                      </Card.Title>
-                      <Card.Body >
+                      </CardTitle>
+                      <CardBody>
                         <div className="d-flex justify-content-center">
-                          <Spinner animation="border" variant="primary" />
+                          <Spinner size="lg" />
                         </div>
-                      </Card.Body>
+                      </CardBody>
                     </React.Fragment>
                   )
                 // Loaded
                   : (
                     <React.Fragment>
-                      <Card.Title>
+                      <CardTitle>
                         <div>
                           Repositories
                         </div>
@@ -254,7 +261,7 @@ export default class ConnectReposPage extends React.Component<RouteComponentProp
                                 href={this.state.reposSecretsData.urls.installationSettings}
                                 title="Edit Installation"
                               >
-                                <BtnBody icon="cog" text="Edit Installation" />
+                                <BtnBody icon={CommonIcons.Configure} text="Edit Installation" />
                               </ExternalLink>
                             </Button>
                             <Button variant="primary"
@@ -263,12 +270,12 @@ export default class ConnectReposPage extends React.Component<RouteComponentProp
                                 await this.loadReposSecrets();
                               }}
                             >
-                              <BtnBody icon="sync-alt" text="Reload"/>
+                              <BtnBody icon={CommonIcons.Reload} text="Reload"/>
                             </Button>
                           </div>
                         </div>
-                      </Card.Title>
-                      <Card.Body>
+                      </CardTitle>
+                      <CardBody>
                         <p>
                           Select the repositories to create secrets in, so workflows can log into this OpenShift cluster.
                         </p>
@@ -276,21 +283,21 @@ export default class ConnectReposPage extends React.Component<RouteComponentProp
                           Then, click <b>Create Secrets</b>.
                         </p>
                         <div className="text-md my-4 btn-line">
-                          <Button variant="light"
+                          <Button variant="tertiary"
                             onClick={(_e) => {
                               this.setAllChecked(true);
                             }}
                           >
-                            <BtnBody icon="check-square" text="Select All" />
+                            <BtnBody icon={CheckSquareIcon} text="Select All" />
                           </Button>
 
-                          <Button variant="light"
+                          <Button variant="tertiary"
                             onClick={(_e) => {
                               this.setAllChecked(false);
                             }}
                             title="Deselect All"
                           >
-                            <BtnBody icon="minus-square" text="Deselect All"/>
+                            <BtnBody icon={MinusSquareIcon} text="Deselect All"/>
                           </Button>
                         </div>
                         <div className="long-content">
@@ -354,7 +361,7 @@ export default class ConnectReposPage extends React.Component<RouteComponentProp
                           isSubmitting={this.state.isSubmitting}
                           submissionResult={this.state.submissionResult}
                         />
-                      </Card.Body>
+                      </CardBody>
                     </React.Fragment>
                   )
                 }
@@ -434,6 +441,7 @@ function RepoWithSecretsItem({
 }: RepoItemProps): JSX.Element {
 
   const [ isShowingSecrets, setIsShowingSecrets ] = useState(false);
+  const expandableSectionId = "expandable-secrets-" + i;
 
   const isEven = i % 2 === 0;
 
@@ -453,14 +461,14 @@ function RepoWithSecretsItem({
             classNames("flex-grow-1 d-flex justify-content-between align-items-center")
           }
         >
-          <FormInputCheck checked={checked} type="checkbox"
-            className={"flex-grow-1 m-0 clickable"}
-            title="Click to toggle"
+          <Checkbox isChecked={checked}
+            id={"toggle-" + i}
+            className={"flex-grow-1 m-0"}
             onChange={(newChecked) => {
               onCheckChanged(newChecked);
-            }}>
-            {repoWithSecrets.repo.full_name}
-          </FormInputCheck>
+            }}
+            label={repoWithSecrets.repo.full_name}
+          />
 
           <div className="mr-4">
             <ShowSecretsButton
@@ -483,32 +491,31 @@ function RepoWithSecretsItem({
           }
         </div> */}
         <div className="btn-line">
-          <Button variant="light"
+          <Button variant="secondary"
             title="GitHub Repository"
           >
             <ExternalLink
               href={repoWithSecrets.repo.html_url}
               title="GitHub Repository"
             >
-              <BtnBody icon={[ "fab", "github" ]} />
+              <BtnBody icon={CommonIcons.GitHub} />
             </ExternalLink>
           </Button>
 
-          <Button variant="light"
+          <Button variant="secondary"
             title="Edit Secrets in GitHub"
           >
             <ExternalLink
               href={getSecretsUrlForRepo(repoWithSecrets.repo)}
               title="Edit Secrets in GitHub"
             >
-              <BtnBody icon="edit"/>
+              <BtnBody icon={EditIcon} />
             </ExternalLink>
           </Button>
         </div>
       </div>
-      {/* https://react-bootstrap.github.io/utilities/transitions/ */}
-      <Collapse in={isShowingSecrets}>
-        {/* Do not put padding or margin on this div as it will mess up the collapse transition */}
+      <ExpandableSectionToggle isExpanded={isShowingSecrets} contentId={expandableSectionId} className="d-none" />
+      <ExpandableSection isExpanded={isShowingSecrets} isDetached contentId={expandableSectionId}>
         <div>
           {
             repoWithSecrets.secrets.length === 0
@@ -561,47 +568,45 @@ function RepoWithSecretsItem({
               )
           }
         </div>
-      </Collapse>
+      </ExpandableSection>
     </div>
   );
 }
 
 function ShowSecretsButton(props: { noSecrets: number, isShowingSecrets: boolean, onClick: () => void }): JSX.Element {
-  let icon: IconProp;
+  let BtnIcon: IconElement;
   let text: string;
   if (props.noSecrets > 0) {
     if (props.isShowingSecrets) {
-      icon = "eye-slash";
+      BtnIcon = EyeSlashIcon;
       text = "Hide Secrets";
     }
     else {
-      icon = "eye";
+      BtnIcon = EyeIcon;
       text = "Show Secrets";
     }
   }
   else {
-    icon = "minus-circle";
+    BtnIcon = MinusCircleIcon;
     text = "No Secrets";
   }
 
   return (
     <React.Fragment>
-      <Button variant="light b"
+      <Button variant="secondary"
         title={text}
         onClick={(_e) => {
           props.onClick();
         }}
       >
-        <FontAwesomeIcon fixedWidth icon={icon} />
+        <BtnIcon />
         <span className="mx-2">
           {text}
         </span>
-        <div>
-          {props.noSecrets > 0 ?
-            <Badge variant="info">{props.noSecrets}</Badge>
-            : ("")
-          }
-        </div>
+        {props.noSecrets > 0 ?
+          <Badge>{props.noSecrets}</Badge>
+          : ("")
+        }
       </Button>
     </React.Fragment>
   );
@@ -613,7 +618,7 @@ function getSecretNameWarning(_secretNames: string[]): JSX.Element {
 
   return (
     <div>
-      <FontAwesomeIcon className="mr-2 text-success" icon="info-circle" title={msg} fixedWidth />
+      <InfoCircleIcon className="mr-2 text-success" title={msg} />
       {msg}
     </div>
   );
@@ -656,7 +661,7 @@ function SubmissionResultBanner(props: {
                 {props.submissionResult.successes.map((success) => {
                   return (
                     <li key={success.actionsSecretName + success.repo.full_name}>
-                      <FontAwesomeIcon icon="check-circle" fixedWidth className="mr-2 text-success" />
+                      <CommonIcons.Success className="mr-2 text-success" />
                       <b>{success.actionsSecretName}</b> in {success.repo.full_name}
                     </li>
                   );
@@ -673,7 +678,7 @@ function SubmissionResultBanner(props: {
                 {props.submissionResult.failures.map((failure) => {
                   return (
                     <li key={failure.actionsSecretName + failure.repo.full_name}>
-                      <FontAwesomeIcon icon="times-circle" fixedWidth className="mr-2 text-danger" />
+                      <CommonIcons.Error className="mr-2 text-danger" />
                       {failure.actionsSecretName != null ?
                         (
                           <React.Fragment>

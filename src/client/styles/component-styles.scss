@@ -1,0 +1,119 @@
+@use "./constants" as c;
+
+.btn, .pf-c-button {
+  // max-height: 3em;
+
+  display: flex !important;
+  justify-content: space-around;
+  align-items: center;
+
+  & a, & a:focus {
+    color: inherit;
+    &:hover {
+      --pf-global--link--TextDecoration--hover: none;
+      // text-decoration: none;
+    }
+  }
+
+  /*
+  &.btn-light, &.btn-outline-light {
+    &:hover a {
+      text-decoration: none;
+      color: c.$dark;
+    }
+  }
+  */
+}
+
+.btn:disabled, button:disabled, [type="button"]:disabled {
+  cursor: not-allowed;
+}
+
+$card-border-radius: 0.5rem;
+
+.card, .pf-c-card {
+  // --pf-c-card--BoxShadow: 0.1rem 0.1rem 0.1rem #888 !important;
+
+  border-radius: $card-border-radius;
+  // box-shadow: $card-box-shadow;
+  margin-bottom: 1.5em;
+
+  & .bg-darker {
+    background-color: c.$body-bg;
+  }
+}
+
+$card-border: 2px solid c.$rh-gray;
+$card-limit-padding: 1rem 1.25rem;
+
+.card-title, .pf-c-card__title {
+  border-bottom: $card-border;
+  // padding: $card-limit-padding;
+
+  display: flex;
+  align-items: center;
+
+  margin: 0;
+  font-weight: bold;
+}
+
+.pf-c-card__body {
+  padding-top: calc(var(--pf-c-card--child--PaddingBottom) / 2);
+
+  & p:first-child {
+    margin-top: 0;
+  }
+}
+
+.card-footer, .pf-c-card__footer {
+  border-top: $card-border;
+  // padding: $card-limit-padding;
+  margin: 0;
+}
+
+input {
+  &.error, &.error:focus, &.warning, &.warning:focus {
+    border-width: 3px;
+    border-style: solid;
+    box-shadow: none;
+
+    &.error {
+      // border-color: $pf-global--danger-color--200;
+      border-color: c.$danger;
+    }
+    &.warning {
+      // border-color: c.$pf-global--warning-color--200;
+      border-color: c.$warning;
+    }
+  }
+}
+
+.pf-c-check {
+  align-items: center !important;
+}
+
+.table thead tr td {
+  border-top: none;
+}
+
+.pf-c-tooltip {
+
+  & p {
+    margin: c.$pf-global--spacer--xs 0;
+    text-align: left;
+  }
+}
+
+.pf-c-form__group, .pf-c-form-control {
+  margin-bottom: c.$pf-global--spacer--sm;
+
+  &-label {
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
+.tooltip-icon {
+  height: 1.25em;
+  width: 1.25em;
+}

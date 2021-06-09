@@ -1,5 +1,4 @@
-import { IconProp } from "@fortawesome/fontawesome-svg-core";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { IconElement } from "../util/icons";
 
 export function ExternalLink({
   href, children, className, title, icon,
@@ -11,7 +10,7 @@ export function ExternalLink({
 
     icon?: {
       position: "left" | "right",
-      icon: IconProp,
+      icon: IconElement,
     },
   }) {
 
@@ -20,12 +19,12 @@ export function ExternalLink({
   return (
     <a href={href}
       target="_blank" rel="noopener noreferrer"
-      className={"external-link font-weight-bold " + (className ?? "")}
+      className={"b" + (className ?? "")}
       title={title != null ? title : href}
     >
-      {icon?.position === "left" ? <FontAwesomeIcon icon={icon.icon} style={{ marginRight: marginSize }} /> : ("")}
+      {icon?.position === "left" ? <icon.icon style={{ marginRight: marginSize }} /> : ("")}
       {children}
-      {icon?.position === "right" ? <FontAwesomeIcon icon={icon.icon} style={{ marginLeft: marginSize }} /> : ("")}
+      {icon?.position === "right" ? <icon.icon style={{ marginLeft: marginSize }} /> : ("")}
     </a>
   );
 }

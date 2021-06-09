@@ -1,10 +1,10 @@
 import classNames from "classnames";
 import { Link, useHistory } from "react-router-dom";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { Button, Card } from "react-bootstrap";
+import { Button } from "@patternfly/react-core";
 
+import { ArrowRightIcon, CheckCircleIcon } from "@patternfly/react-icons";
 import ClientPages from "../client-pages";
-import BtnBody from "../../components/fa-btn-body";
+import BtnBody from "../../components/btn-body";
 import { getSearchParam } from "../../util/client-util";
 
 type SetupPageProps = {
@@ -40,6 +40,8 @@ export function getSetupSteps() {
 
 export default function SetupPageHeader(props: SetupPageProps): JSX.Element {
 
+  const history = useHistory();
+
   if (!isSetup()) {
     return (<></>);
   }
@@ -54,79 +56,71 @@ export default function SetupPageHeader(props: SetupPageProps): JSX.Element {
     );
   }
 
-  const history = useHistory();
-
   // const nextBtnText = props.pageIndex === setupSteps.length - 1 ? "Finish" : "Next";
   const nextBtnText = "Next";
   // const showBackBtn = props.pageIndex !== 0;
 
   return (
     <div id="setup-header">
-      <div id="setup-header-wrapper">
-        <div id="setup-header-background">
+      <div id="setup-header-body">
+        <div id="setup-header-steps" className="d-flex justify-content-around">
+          {setupSteps.map((step, i) => {
+            const isCurrentStep = i === props.pageIndex;
+            let stepType: SetupStepType;
+            if (isCurrentStep) {
+              stepType = "current";
+            }
+            else if (props.pageIndex > i) {
+              stepType = "passed";
+            }
+            else {
+              stepType = "todo";
+            }
+
+            // const clickable = stepType === "passed";
+
+            return (
+              <Link to={step.path} key={i} className={classNames("setup-step", stepType)}>
+                <div className="mb-2 d-flex justify-content-center">
+                  <div className={`setup-step-circle ${stepType}`}>
+                    {stepType === "passed" ? <CheckCircleIcon /> : (i + 1).toString()}
+                  </div>
+                </div>
+                <span className={classNames({ b: isCurrentStep })}>{step.title}</span>
+              </Link>
+            );
+          })}
         </div>
-        <Card id="setup-header-body">
-          <div id="setup-header-steps" className="d-flex justify-content-around">
-            {setupSteps.map((step, i) => {
-              const isCurrentStep = i === props.pageIndex;
-              let stepType: SetupStepType;
-              if (isCurrentStep) {
-                stepType = "current";
-              }
-              else if (props.pageIndex > i) {
-                stepType = "passed";
-              }
-              else {
-                stepType = "todo";
-              }
+        <div id="setup-header-buttons" className={
+          classNames("align-items-center justify-content-end", {
+            "d-flex": props.hideBtnBanner !== true,
+            "d-none": props.hideBtnBanner === true,
+          })}>
 
-              // const clickable = stepType === "passed";
+          {!props.hideBtnBanner
+            ? <Button disabled={props.canProceed === false}
+              className={classNames("b btn-lg ml-auto d-flex justify-content-center")}
+              title={props.canProceed ? nextBtnText : "Complete this page to proceed"}
+              onClick={async () => {
+                if (props.canProceed === false) {
+                  return;
+                }
 
-              return (
-                <Link to={step.path} key={i} className={classNames("setup-step", stepType)}>
-                  <div className="mb-2 d-flex justify-content-center">
-                    <div className={`setup-step-circle ${stepType}`}>
-                      {stepType === "passed" ? <FontAwesomeIcon icon="check-circle"/> : (i + 1).toString()}
-                    </div>
-                  </div>
-                  <span className={classNames({ b: isCurrentStep })}>{step.title}</span>
-                </Link>
-              );
-            })}
-          </div>
-          <div id="setup-header-buttons" className={
-            classNames("align-items-center justify-content-between", {
-              "d-flex": props.hideBtnBanner !== true,
-              "d-none": props.hideBtnBanner === true,
-            })}>
+                // if (props.pageIndex === setupSteps.length - 1) {
+                //   history.push(ClientPages.SetupFinished.path);
+                //   return;
+                // }
 
-            {!props.hideBtnBanner
-              ? <Button disabled={props.canProceed === false}
-                className={classNames("b btn-lg ml-auto d-flex justify-content-center")}
-                title={props.canProceed ? nextBtnText : "Complete this page to proceed"}
-                onClick={async () => {
-                  if (props.canProceed === false) {
-                    return;
-                  }
-
-                  // if (props.pageIndex === setupSteps.length - 1) {
-                  //   history.push(ClientPages.SetupFinished.path);
-                  //   return;
-                  // }
-
-                  const nextPage = setupSteps[props.pageIndex + 1].path;
-                  history.push(nextPage);
-                }}
-              >
-                <a>
-                  <div className="d-flex align-items-center">
-                    <BtnBody icon="arrow-right" iconPosition="right" text={nextBtnText}/>
-                  </div>
-                </a>
-              </Button>
-              : ""}
-          </div>
-        </Card>
+                const nextPage = setupSteps[props.pageIndex + 1].path;
+                history.push(nextPage);
+              }}
+            >
+              <div className="d-flex align-items-center">
+                <BtnBody icon={ArrowRightIcon} iconPosition="right" text={nextBtnText}/>
+              </div>
+            </Button>
+            : ""}
+        </div>
       </div>
     </div>
   );

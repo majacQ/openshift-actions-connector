@@ -15,18 +15,25 @@ spec:
         {{- toYaml .Values.commonLabels | nindent 8 }}
     spec:
       serviceAccountName: {{ .Values.serviceAccountName }}
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst
       volumes:
         - emptyDir: {}
           name: tmp
+        - name: console-serving-cert
+          secret:
+            secretName: console-serving-cert
+            defaultMode: 420
+
       containers:
         - name: {{ .Values.appName }}-server
           imagePullPolicy: Always
           image: {{ .Values.serverImage }}:{{ .Values.serverTag }}
           ports:
-            - name: {{ .Values.clientPortName }}
-              containerPort: {{ .Values.clientPort }}
-            - name: {{ .Values.serverPortName }}
-              containerPort: {{ .Values.serverPort }}
+            - name: {{ .Values.serverHttpPortName }}
+              containerPort: {{ .Values.serverHttpPort }}
+            - name: {{ .Values.serverHttpsPortName }}
+              containerPort: {{ .Values.serverHttpsPort }}
 
           {{- toYaml .Values.securityContext | nindent 10 }}
           resources:
@@ -41,9 +48,12 @@ spec:
             - mountPath: /tmp
               name: tmp
 
-          env:
-            {{ $apiServerUrl := required ".Values.clusterApiServer must be set. Refer to the values.yaml" .Values.clusterApiServer }}
+            - name: console-serving-cert
+              readOnly: true
+              mountPath: /var/serving-cert
 
+          {{ $apiServerUrl := required ".Values.clusterApiServer must be set. Refer to the values.yaml" .Values.clusterApiServer }}
+          env:
             - name: CLUSTER_API_SERVER
               value: {{ .Values.clusterApiServer }}
 

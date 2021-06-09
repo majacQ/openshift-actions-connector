@@ -1,12 +1,11 @@
 import React, { useState } from "react";
 import {
-  Card,
-} from "react-bootstrap";
+  Card, CardTitle, CardBody, Checkbox,
+} from "@patternfly/react-core";
 
 import ApiEndpoints from "../../../../common/api-endpoints";
 import ApiResponses from "../../../../common/api-responses";
 import DataFetcher from "../../../components/data-fetcher";
-import FormInputCheck from "../../../components/form-input-check";
 import CreateAppCard from "./create-app";
 import InstallExistingAppCard from "./install-existing-app";
 import SetupPageHeader from "../setup-header";
@@ -29,10 +28,10 @@ export default function SetupAppPage(): JSX.Element {
           return (
             <React.Fragment>
               <Card>
-                <Card.Title>
+                <CardTitle>
                   Set up GitHub App
-                </Card.Title>
-                <Card.Body>
+                </CardTitle>
+                <CardBody>
                   <p>This is a description of what an app is, with links to GitHub documentation.</p>
 
                   <p>
@@ -46,13 +45,13 @@ export default function SetupAppPage(): JSX.Element {
                   </p>
 
                   <div className="d-none border-bottom px-2 py-3">
-                    <FormInputCheck type="checkbox"
-                      disabled={true}
-                      checked={enterpriseChecked}
+                    <Checkbox
+                      id="use-ghe"
+                      isDisabled={true}
+                      isChecked={enterpriseChecked}
                       onChange={(checked) => setEnterpriseChecked(checked)}
-                    >
-                      Use GitHub Enterprise
-                    </FormInputCheck>
+                      label="Use GitHub Enterprise"
+                    />
                     <p>
                       Use a GitHub Enterprise (GHE) instance instead of <code>github.com</code>. The GHE instance must be reachable from this cluster.
                     </p>
@@ -62,17 +61,17 @@ export default function SetupAppPage(): JSX.Element {
                   </div>
 
                   {/* <div className="btn-line justify-content-around mt-4 mb-3">
-                    <Button size="lg" disabled={!appExists} active={createOrUse === "use-existing"} onClick={() => setCreateOrUse("use-existing")}>
+                    <Button isLarge disabled={!appExists} active={createOrUse === "use-existing"} onClick={() => setCreateOrUse("use-existing")}>
                       <BtnBody icon="search" text={USE_EXISTING_TITLE} />
                     </Button>
                     <span className="text-lg">
                       or
                     </span>
-                    <Button size="lg" disabled={appExists} active={createOrUse === "create"} onClick={() => setCreateOrUse("create")}>
+                    <Button isLarge disabled={appExists} active={createOrUse === "create"} onClick={() => setCreateOrUse("create")}>
                       <BtnBody icon="plus" text={CREATE_NEW_TITLE} />
                     </Button>
                   </div> */}
-                </Card.Body>
+                </CardBody>
               </Card>
 
               {

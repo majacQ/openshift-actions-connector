@@ -1,12 +1,12 @@
 import React from "react";
-import { Card, Spinner } from "react-bootstrap";
+import { Card, CardBody, Spinner } from "@patternfly/react-core";
 import UrlPath from "../../common/types/url-path";
 import { fetchJSON } from "../util/client-util";
 
 interface BaseDataFetcherProps<Data> {
     children: (data: Data, reload: () => Promise<void>) => React.ReactNode,
     type: "generic" | "api",
-    loadingDisplay?: "text" | "spinner" | "spinner-1em" | "card" | "card-body" | "none" | JSX.Element,
+    loadingDisplay?: "text" | "spinner" | "card" | "card-body" | "none" | JSX.Element,
     loadingStyle?: React.CSSProperties,
 }
 
@@ -36,8 +36,6 @@ interface DataFetcherState<Data> {
  */
 export default class DataFetcher<Data> extends React.Component<DataFetcherProps<Data>, DataFetcherState<Data>> {
 
-  private readonly eventTarget = new EventTarget();
-
   constructor(
     props: DataFetcherProps<Data>,
   ) {
@@ -49,7 +47,7 @@ export default class DataFetcher<Data> extends React.Component<DataFetcherProps<
     return { loadingError: error };
   }
 
-  async componentDidMount(): Promise<void> {
+  override async componentDidMount(): Promise<void> {
     await this.load();
   }
 
@@ -86,7 +84,9 @@ export default class DataFetcher<Data> extends React.Component<DataFetcherProps<
     }
   }
 
-  public render() {
+  override render() {
+    const cardSpinnerSize = "lg";
+
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (this.state == null || !this.state.loaded) {
       const loadingDisplayType = this.props.loadingDisplay ?? "text";
@@ -95,32 +95,26 @@ export default class DataFetcher<Data> extends React.Component<DataFetcherProps<
           <span style={this.props.loadingStyle}>Loading...</span>
         );
       }
-      else if (loadingDisplayType === "spinner" || loadingDisplayType === "spinner-1em") {
+      else if (loadingDisplayType === "spinner") {
         const loadingStyle = this.props.loadingStyle ?? {};
-
-        if (loadingDisplayType === "spinner-1em") {
-          loadingStyle.height = "1em";
-          loadingStyle.width = "1em";
-        }
-
         return (
-          <Spinner style={loadingStyle} animation="border" variant="primary"/>
+          <Spinner style={loadingStyle} diameter="1em"/>
         );
       }
       else if (loadingDisplayType === "card") {
         return (
           <Card style={{ minHeight: "100px" }}>
-            <Card.Body className="d-flex justify-content-center align-items-center">
-              <Spinner style={this.props.loadingStyle ?? {}} animation="border" variant="primary"/>
-            </Card.Body>
+            <CardBody className="centers">
+              <Spinner style={this.props.loadingStyle ?? {}} size={cardSpinnerSize}/>
+            </CardBody>
           </Card>
         );
       }
       else if (loadingDisplayType === "card-body") {
         return (
-          <Card.Body className="d-flex justify-content-center align-items-center">
-            <Spinner style={this.props.loadingStyle ?? {}} animation="border" variant="primary"/>
-          </Card.Body>
+          <CardBody className="centers">
+            <Spinner style={this.props.loadingStyle ?? {}} size={cardSpinnerSize} />
+          </CardBody>
         );
       }
       else if (loadingDisplayType === "none") {
