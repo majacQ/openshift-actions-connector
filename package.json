@@ -59,7 +59,7 @@
     "node-fetch": "^2.6.1",
     "popper.js": "1",
     "react": "^17.0.1",
-    "react-bootstrap": "^1.5.2",
+    "react-bootstrap": "^2.1.0",
     "react-dom": "^17.0.1",
     "react-helmet": "^6.1.0",
     "react-router-dom": "^5.2.0",
