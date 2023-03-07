@@ -1,17 +1,11 @@
 import { Severity } from "./common-util";
-import { DefaultSecrets } from "./default-secret-names";
 import {
-  GitHubAppOwnerUrls,
-  GitHubAppInstallationData,
-  GitHubRepo,
-  GitHubActionsSecret,
-  GitHubRepoId,
-  GitHubUserData,
-  GitHubAppInstallationUrls,
-  GitHubAppPublicData,
-  GitHubAppConfigNoSecrets,
+  GitHubAppConfigNoSecrets, GitHubAppInstallationData, GitHubAppInstallationUrls, GitHubAppOwnerUrls,
+  GitHubAppPublicData, GitHubRepo, GitHubRepoId, RepoWithSecrets,
 } from "./types/gh-types";
 import ImageRegistry from "./types/image-registries";
+import { ConnectorUserInfo } from "./types/user-types";
+import { WorkflowIDs } from "./workflows/workflows";
 
 namespace ApiResponses {
 
@@ -24,16 +18,14 @@ namespace ApiResponses {
     severity: Severity,
   }
 
-  export interface ResultSuccess extends ResultWithSeverity {
+  export interface ResultSuccess extends Result {
     success: true,
+    severity?: "success" | "info",
   }
 
-  export interface ResultFailed extends ResultWithSeverity {
+  export interface ResultFailed extends Result {
     success: false,
-    severity: "warning" | "danger",
-  }
-
-  export interface Error extends ResultFailed {
+    severity?: "warning" | "danger",
     status: number,
     statusMessage: string,
   }
@@ -43,9 +35,10 @@ namespace ApiResponses {
   //   state: string;
   // }
 
-  export interface CreatingAppResponse extends Result {
+  export type CreatingAppResponse = (ResultSuccess & {
     appInstallUrl: string,
-  }
+    appName: string,
+  }) | ResultFailed;
 
   export interface ExistingAppData {
     // client_id: string,
@@ -62,15 +55,12 @@ namespace ApiResponses {
     },
   }
 
-  export type AllAppsState = {
+  export type AllConnectorApps = {
     success: true,
-    totalCount: number,
+    doesAnyAppExist: boolean,
+    // totalCount: number,
     visibleApps: ExistingAppData[],
   } | ResultFailed;
-
-  export interface GitHubAppMissing extends Result {
-    success: false,
-  }
 
   export interface UserAppExists {
     // discriminators
@@ -115,44 +105,27 @@ namespace ApiResponses {
     ownedAppData: UserOwnedAppData,
   }
 
-  export type UserAppState = GitHubAppMissing | UserAppOwned | UserAppInstalled | UserAppOwnedAndInstalled;
+  export type UserAppState = UserAppOwned | UserAppInstalled | UserAppOwnedAndInstalled | ResultFailed;
 
   export interface RemovalResult extends Result {
     removed: boolean,
   }
 
-  // extending githubuser type here in case we want to add more fields to this response later
+  type OpenShiftUser = ConnectorUserInfo & ResultSuccess;
+  export type UserResponse = OpenShiftUser | ResultFailed;
 
-  // eslint-disable-next-line @typescript-eslint/no-empty-interface
-  export interface GitHubUserResponse extends GitHubUserData {
-
-  }
-
-  export interface GitHubAppRepos {
-    app: true,
+  export interface GitHubAppRepos extends ResultSuccess {
     repos: GitHubRepo[],
   }
 
-  export type GitHubAppReposState = GitHubAppMissing | GitHubAppRepos;
-
-  export interface RepoWithSecrets {
-    repo: GitHubRepo,
-    hasClusterSecrets: boolean,
-    hasRegistrySecret: boolean,
-    secrets: GitHubActionsSecret[],
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-empty-interface
-  export interface DefaultSecretsResponse extends DefaultSecrets {
-
-  }
+  export type GitHubAppReposState = GitHubAppRepos | ResultFailed;
 
   export interface ReposSecretsStatus {
     // orgs: [{
     //   org: GitHubOrg;
     //   secrets: GitHubActionsOrgSecret[];
     // }],
-    defaultSecretNames: DefaultSecrets,
+    // DEFAULT_SECRET_NAMES: DefaultSecrets,
     repos: RepoWithSecrets[],
     urls: GitHubAppInstallationUrls,
   }
@@ -179,14 +152,27 @@ namespace ApiResponses {
     //   secretName: string,
     //   created: boolean,
     // }[],
+    serviceAccount: {
+      created: boolean,
+      name: string,
+      namespace: string,
+      role: string,
+    },
     successes?: RepoSecretCreationSuccess[],
     failures?: RepoSecretCreationFailure[],
   }
 
   export interface WorkflowCreationResultSuccess extends ResultSuccess {
-    secretsUrl: string,
-    workflowFileUrl: string,
-    registrySecret: string,
+    id: WorkflowIDs,
+    repo: GitHubRepoId,
+    createdSecrets: string[],
+    prNumber: number,
+    urls: {
+      pullRequest: string,
+      // repo: string,
+      secrets: string,
+      workflowFile: string,
+    },
   }
 
   export type WorkflowCreationResult = ResultFailed | WorkflowCreationResultSuccess;
@@ -215,14 +201,21 @@ namespace ApiResponses {
 
   export type ClusterState = ClusterStateDisconnected | ClusterStateConnected;
 
-  // eslint-disable-next-line @typescript-eslint/no-empty-interface
+  export interface UserProjects {
+    projects: string[],
+  }
+
+  export interface UserNamespacedServiceAccounts {
+    namespace: string,
+    serviceAccounts: string[],
+  }
+
   interface ImageRegistryCreationSuccess extends ResultSuccess {
     registry: ImageRegistry.Info,
   }
 
   export type ImageRegistryCreationResult = ImageRegistryCreationSuccess | ResultFailed;
 
-  // eslint-disable-next-line @typescript-eslint/no-empty-interface
   interface ImageRegistryListSuccess extends ResultSuccess {
     registries: ImageRegistry.List,
     registryPasswordSecretName: string,

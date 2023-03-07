@@ -4,6 +4,7 @@ namespace HttpConstants {
 
   export namespace Headers {
     export const Accept = "Accept";
+    export const Allow = "Allow";
     export const ContentType = "Content-Type";
     export const ContentDisposition = "Content-Disposition";
     export const ContentLength = "Content-Length";
@@ -12,17 +13,19 @@ namespace HttpConstants {
 
   export namespace ContentTypes {
     export const Json = "application/json";
-    export const Problem = "application/problem+json";
+    // export const Problem = "application/problem+json";
     export const Html = "text/html";
+    export const TextPlain = "text/plain";
     export const OctectStream = "application/octet-stream";
     export const JsonPatch = "application/strategic-merge-patch+json";
 
     export const Charset = "charset=utf-8";
   }
 
-  export function getJSONContentHeaders(body?: string): Record<string, string> {
+  export function getJSONHeadersForReq(body?: string): Record<string, string> {
     const acceptTypes = [
-      HttpConstants.ContentTypes.Json, HttpConstants.ContentTypes.Problem,
+      HttpConstants.ContentTypes.Json,
+      // HttpConstants.ContentTypes.Problem,
     ].join(",");
 
     const contentType = body != null && Object.keys(body).length > 0

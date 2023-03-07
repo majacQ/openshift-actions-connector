@@ -2,6 +2,12 @@ name: Build and run
 on:
   push:
 
+env:
+  PORT: 3000
+  OAUTH_CLIENT_SECRET: "stub"
+  SESSION_SECRET: "stub"
+  SESSION_STORE_SECRET: "stub"
+
 jobs:
   ci:
     name: CI
@@ -11,6 +17,12 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: 14
+
+      - name: Increase max watches
+        run: |
+          set -ex
+          echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf
+          sudo sysctl -p
 
       - uses: actions/checkout@v2
 
@@ -24,23 +36,37 @@ jobs:
         run: |
           yarn build
 
+      - uses: redhat-actions/oc-login@v1
+        with:
+          openshift_server_url: ${{ secrets.OPENSHIFT_SERVER }}
+          openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
+          namespace: ${{ secrets.OPENSHIFT_NAMESPACE }}
+
+      - uses: tetchel/generate-tls-cert@v1
+        with:
+          output_directory: /var/certs/localhost
+
+      - name: Add cert to env configuration
+        run: echo "SERVING_CA_DIRECTORY=/var/certs/localhost" >> .env.local
+
       - name: Run dev
         shell: bash
         run: |
           set -eEx
-          nohup yarn dev > out.log 2>&1 &
+          nohup yarn dev:all > out.log 2>&1 &
           dev_pid=$!
           echo "dev_pid=$dev_pid" >> $GITHUB_ENV
 
-          yarn wait-on -l tcp:3000 -t 60000
-          yarn wait-on -l tcp:3003 -t 60000
+          yarn wait-on -l tcp:${{ env.PORT }} -t 60000
 
       - name: Test
         shell: bash
         run: |
           set -eEx
-          curl -sSf http://localhost:3000
-          curl -sSf http://localhost:3003
+          curl -sSfk https://localhost:${{ env.PORT }}
+
+          # Broken because the server crashes due to no OpenShift cluster.
+          # curl -sSfk https://localhost:${{ env.PORT }}/api/v1/
 
       - name: Stop
         if: always()

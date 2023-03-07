@@ -1,39 +1,48 @@
 import React from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { OverlayTrigger, Popover } from "react-bootstrap";
-import { IconProp } from "@fortawesome/fontawesome-svg-core";
+import { Title, Tooltip, TooltipPosition } from "@patternfly/react-core";
 import classNames from "classnames";
-import { v4 as uuid } from "uuid";
-import { Placement } from "react-bootstrap/esm/Overlay";
+import { IconSize, QuestionCircleIcon } from "@patternfly/react-icons";
+import { IconElement } from "../util/icons";
+import { NewTabLink } from "./external-link";
 
 interface TooltipProps {
-  icon?: IconProp,
+  icon?: IconElement,
   iconClasses?: string,
-  placement?: Placement,
+  iconSize?: IconSize,
+  position?: TooltipPosition,
 
   title?: string,
   body?: React.ReactNode,
+
+  href?: string,
 }
 
 export function TooltipIcon(props: TooltipProps) {
 
-  const id = "help-popover" + uuid();
+  // const id = "help-popover" + uuid();
 
-  const placement = props.placement ?? "top";
-  const icon = props.icon ?? "question-circle";
+  const position = props.position ?? "top";
+  const Icon = props.icon ?? QuestionCircleIcon;
+  const IconElem = (
+    <Icon size={props.iconSize} className={classNames("tooltip-icon", props.iconClasses)} />
+  );
 
   return (
-    <OverlayTrigger trigger={[ "hover", "focus" ]} placement={placement} overlay={(
-      <Popover id={id}>
-        {
-          props.title ? <Popover.Title as="h3" className="text-black">{props.title}</Popover.Title> : ""
-        }
-        <Popover.Content>
-          {props.body}
-        </Popover.Content>
-      </Popover>
-    )}>
-      <FontAwesomeIcon icon={icon} className={classNames("mx-3", props.iconClasses)} size="lg" />
-    </OverlayTrigger>
+    <Tooltip
+      content={
+        <div>
+          <Title headingLevel="h5">{props.title}</Title>
+          <div>
+            {props.body}
+          </div>
+        </div>
+      }
+      position={position}
+    >
+      {
+        props.href ? (<NewTabLink href={props.href}>{IconElem}</NewTabLink>) : IconElem
+      }
+
+    </Tooltip>
   );
 }

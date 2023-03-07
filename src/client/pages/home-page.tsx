@@ -1,21 +1,26 @@
-import React from "react";
+import { useContext } from "react";
 import { Link, useHistory } from "react-router-dom";
-import { getSetupSteps } from "./setup/setup-header";
+import { ConnectorUserContext } from "../contexts";
+import ClientPages from "./client-pages";
 
-export default function HomePage(): JSX.Element {
+export default function HomePage() {
+  const { user } = useContext(ConnectorUserContext);
 
   const history = useHistory();
 
-  const setupRoot = getSetupSteps()[0].path;
-
-  history.push(setupRoot);
+  if (user.hasCompletedSetup) {
+    history.push(ClientPages.SetupFinished.path);
+  }
+  else {
+    history.push(ClientPages.SetupIndex.path);
+  }
 
   return (
-    <React.Fragment>
+    <>
       <h2>Welcome</h2>
       <h5>
-        <Link to={setupRoot}>Go to the Setup Page</Link>
+        <Link to={ClientPages.SetupIndex.path}>Go to the Setup Page</Link>
       </h5>
-    </React.Fragment>
+    </>
   );
 }

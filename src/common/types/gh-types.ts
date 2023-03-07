@@ -1,17 +1,32 @@
-import { components } from "@octokit/openapi-types/dist-types/index";
+import { components } from "@octokit/openapi-types/types";
 
 // we "extract" a series of types from the GitHub schemas, so they're easier to find and reduce imports.
 /* eslint-disable camelcase */
 
-// an organization can also be a simple-user
-export type GitHubUserData = NonNullable<components["schemas"]["simple-user"]>;
+export type GitHubUserDetails = NonNullable<components["schemas"]["simple-user"]>;
+
+export type GitHubUserOAuth = {
+  access_token: string,
+  expires_in: number,
+  refresh_token: string,
+  refresh_token_expires_in: number,
+  scope: string,
+  token_type: string,
+};
+
+export type GitHubUserDetailsWithOAuth = GitHubUserDetails & GitHubUserOAuth;
+
 export type GitHubUserType = "Organization" | "User";
 export type GitHubOrg = components["schemas"]["organization-simple"];
-export type GitHubRepo = components["schemas"]["repository"] & { owner: GitHubUserData };
+export type GitHubRepo = components["schemas"]["repository"] & { owner: GitHubUserDetails };
 export type GitHubAppInstallationData = components["schemas"]["installation"];
 export type GitHubActionsSecret = components["schemas"]["actions-secret"];
 export type GitHubActionsOrgSecret = components["schemas"]["organization-actions-secret"];
 export type RepoSecretsPublicKey = components["schemas"]["actions-public-key"];
+export type InstallationToken = components["schemas"]["installation-token"];
+export type GitHubAppPermissions = components["schemas"]["app-permissions"];
+
+export type WebhookReqBody = components["schemas"]["hook"];
 
 export interface GitHubAppConfigSecrets {
   client_id: string,
@@ -24,39 +39,21 @@ export interface GitHubAppAuthData extends GitHubAppConfigSecrets {
   id: number,
 }
 
-export type GitHubOAuthResponse = {
-  access_token: string,
-  expires_in: number,
-  refresh_token: string,
-  refresh_token_expires_in: number,
-  scope: string,
-  token_type: string,
-};
-
 export type GitHubAppConfig = components["schemas"]["integration"] & GitHubAppConfigSecrets & {
   // some keys are inexplicably marked optional
   slug: string,
-  owner: GitHubUserData,
+  owner: GitHubUserDetails,
 };
 
-// export type GitHubAppConfigNoSecrets = Omit<GitHubAppConfig, keyof GitHubAppConfigSecrets>;
-export type GitHubAppConfigNoSecrets = GitHubAppConfig;
+export type GitHubAppConfigNoSecrets = Exclude<GitHubAppConfig, keyof GitHubAppConfigSecrets>;
+// export type GitHubAppConfigNoSecrets = GitHubAppConfig;
 
 export type GitHubAppPublicData = {
+  id: number,
   name: string,
   slug: string,
   html_url: string,
 };
-
-export function deleteSecrets(config: GitHubAppConfig): GitHubAppConfigNoSecrets {
-  const cfg: Partial<GitHubAppConfig> = { ...config };
-  delete cfg.client_id;
-  delete cfg.client_secret;
-  delete cfg.pem;
-  delete cfg.webhook_secret;
-
-  return cfg as GitHubAppConfigNoSecrets;
-}
 
 // https://docs.github.com/en/rest/reference/repos#get-repository-content
 export type GitHubContentFile = components["schemas"]["content-file"];
@@ -82,10 +79,10 @@ export function getSecretsUrlForRepo(repo: { html_url: string }): string {
 }
 
 // The API is structured as /repos/{owner}/{name}/<path>
-// so you can't just use the repo Id as a unique identifier, which is a bummer.
+// so you can't just use the repo ID as a unique identifier, which is a bummer.
 export interface GitHubRepoId {
   /**
-   * The ID is (shockingly) not really used in the GitHub API.
+   * The ID is not really used in the GitHub API.
    * But, we use it internally as a unique identifier, since repos can be moved.
    */
   id: number,
@@ -99,6 +96,40 @@ export interface GitHubRepoId {
   name: string,
 
   full_name: string,
+  // html_url: string,
+}
+
+export interface RepoWithSecrets {
+  repo: GitHubRepo,
+  hasClusterSecrets: boolean,
+  hasNamespaceSecret: boolean,
+  hasRegistrySecret: boolean,
+  secrets: GitHubActionsSecret[],
+}
+
+export interface GitHubFileLocation {
+  readonly owner: string,
+  readonly repo: string,
+  readonly path: string,
+  readonly ref: string,
+}
+
+export function resolveGitHubFileUrl(file: GitHubFileLocation): string {
+  return `https://github.com/${file.owner}/${file.repo}/blob/${file.ref}/${file.path}`;
+}
+
+export function toGitHubRepoId(repo: {
+  id: number,
+  name: string,
+  full_name: string,
+  owner: { login: string },
+}): GitHubRepoId {
+  return {
+    id: repo.id,
+    name: repo.name,
+    full_name: repo.full_name,
+    owner: repo.owner.login,
+  };
 }
 
 export interface GitHubAppOwnerUrls {

@@ -1,31 +1,39 @@
 import React from "react";
-import { Card, Spinner } from "react-bootstrap";
+import { Card, CardBody, Spinner } from "@patternfly/react-core";
 import UrlPath from "../../common/types/url-path";
 import { fetchJSON } from "../util/client-util";
 
 interface BaseDataFetcherProps<Data> {
-    children: (data: Data, reload: () => Promise<void>) => React.ReactNode,
-    type: "generic" | "api",
-    loadingDisplay?: "text" | "spinner" | "spinner-1em" | "card" | "card-body" | "none" | JSX.Element,
-    loadingStyle?: React.CSSProperties,
+  /**
+   * Return the content to render after fetching completes successfully.
+   */
+  children: (data: Data, reload: () => Promise<void>) => React.ReactNode,
+  /**
+   * Any additional actions to take after an error, in addition to displaying the error.
+   * If the request failed with an HTTP error, err will have the status code in its 'status' key.
+   */
+  onError?: (err: Record<string, unknown>) => void,
+  type: "generic" | "api",
+  loadingDisplay?: "text" | "spinner" | "card" | "card-body" | "none" | JSX.Element,
+  // loadingStyle?: React.CSSProperties,
 }
 
 interface GenericDataFetcherProps<Data> extends BaseDataFetcherProps<Data> {
-    type: "generic",
-    fetchData: () => Promise<Data>,
+  type: "generic",
+  fetchData: (abortSignal: AbortSignal) => Promise<Data>,
 }
 
 interface ApiDataFetcherProps<Data> extends BaseDataFetcherProps<Data> {
-    type: "api",
-    endpoint: UrlPath,
+  type: "api",
+  endpoint: UrlPath,
 }
 
-type DataFetcherProps<Data> = GenericDataFetcherProps<Data> | ApiDataFetcherProps<Data>;
+export type DataFetcherProps<Data> = GenericDataFetcherProps<Data> | ApiDataFetcherProps<Data>;
 
 interface DataFetcherState<Data> {
-    data: Data | undefined,
-    loaded: boolean,
-    loadingError: Error | undefined,
+  data: Data | undefined,
+  loaded: boolean,
+  loadingError: Error | undefined,
 }
 
 // Heavily inspired by https://github.com/argoproj/argo-ui/blob/master/src/components/data-loader.tsx
@@ -36,7 +44,7 @@ interface DataFetcherState<Data> {
  */
 export default class DataFetcher<Data> extends React.Component<DataFetcherProps<Data>, DataFetcherState<Data>> {
 
-  private readonly eventTarget = new EventTarget();
+  private readonly abortController = new AbortController();
 
   constructor(
     props: DataFetcherProps<Data>,
@@ -49,8 +57,12 @@ export default class DataFetcher<Data> extends React.Component<DataFetcherProps<
     return { loadingError: error };
   }
 
-  async componentDidMount(): Promise<void> {
+  override async componentDidMount(): Promise<void> {
     await this.load();
+  }
+
+  override async componentWillUnmount(): Promise<void> {
+    this.abortController.abort();
   }
 
   async load(): Promise<void> {
@@ -63,10 +75,12 @@ export default class DataFetcher<Data> extends React.Component<DataFetcherProps<
     try {
       let data: Data;
       if (this.props.type === "api") {
-        data = await fetchJSON<{}, Data>("GET", this.props.endpoint.path);
+        data = await fetchJSON<never, Data>("GET", this.props.endpoint.path, undefined, {
+          signal: this.abortController.signal,
+        });
       }
       else {
-        data = await this.props.fetchData();
+        data = await this.props.fetchData(this.abortController.signal);
       }
 
       this.setState({
@@ -75,7 +89,14 @@ export default class DataFetcher<Data> extends React.Component<DataFetcherProps<
       });
     }
     catch (err) {
+      if (this.abortController.signal.aborted) {
+        return;
+      }
+
       console.warn(`Error loading data:`, err);
+      if (this.props.onError) {
+        this.props.onError(err);
+      }
       this.setState({ loadingError: err });
     }
     finally {
@@ -86,41 +107,39 @@ export default class DataFetcher<Data> extends React.Component<DataFetcherProps<
     }
   }
 
-  public render() {
+  override render() {
+    const spinnerSize = "lg";
+    const cardSpinnerSize = "md";
+
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (this.state == null || !this.state.loaded) {
       const loadingDisplayType = this.props.loadingDisplay ?? "text";
       if (loadingDisplayType === "text") {
         return (
-          <span style={this.props.loadingStyle}>Loading...</span>
+          <span>Loading...</span>
         );
       }
-      else if (loadingDisplayType === "spinner" || loadingDisplayType === "spinner-1em") {
-        const loadingStyle = this.props.loadingStyle ?? {};
-
-        if (loadingDisplayType === "spinner-1em") {
-          loadingStyle.height = "1em";
-          loadingStyle.width = "1em";
-        }
-
+      else if (loadingDisplayType === "spinner") {
         return (
-          <Spinner style={loadingStyle} animation="border" variant="primary"/>
+          <div className="center-x">
+            <Spinner size={spinnerSize} />
+          </div>
         );
       }
       else if (loadingDisplayType === "card") {
         return (
           <Card style={{ minHeight: "100px" }}>
-            <Card.Body className="d-flex justify-content-center align-items-center">
-              <Spinner style={this.props.loadingStyle ?? {}} animation="border" variant="primary"/>
-            </Card.Body>
+            <CardBody className="centers">
+              <Spinner size={cardSpinnerSize}/>
+            </CardBody>
           </Card>
         );
       }
       else if (loadingDisplayType === "card-body") {
         return (
-          <Card.Body className="d-flex justify-content-center align-items-center">
-            <Spinner style={this.props.loadingStyle ?? {}} animation="border" variant="primary"/>
-          </Card.Body>
+          <CardBody className="centers">
+            <Spinner size={cardSpinnerSize} />
+          </CardBody>
         );
       }
       else if (loadingDisplayType === "none") {
@@ -138,7 +157,7 @@ export default class DataFetcher<Data> extends React.Component<DataFetcherProps<
     else if (this.state.data == null) {
       return (
         <p className="text-danger">
-          Data to fetch was {this.state.data}.
+          Failed to fetch: Response body empty.
         </p>
       );
     }

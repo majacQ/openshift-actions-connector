@@ -1,8 +1,7 @@
 {
-    "ignore": [
-        "dist/views/"
-    ],
-    "events": {
-    },
-    "ext": "*.js"
+    "watch": [
+        "dist/server/server.js",
+        ".env",
+        ".env.local"
+    ]
 }

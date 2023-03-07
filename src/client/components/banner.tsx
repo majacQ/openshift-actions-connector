@@ -1,11 +1,10 @@
 import React from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import classNames from "classnames";
-import { Spinner } from "react-bootstrap";
+import { Spinner } from "@patternfly/react-core";
+import { CommonIcons, IconElement } from "../util/icons";
 import { Severity } from "../../common/common-util";
 
-namespace Banner {
+namespace MyBanner {
   export type Props = {
     display?: boolean,
     severity?: Severity,
@@ -16,8 +15,8 @@ namespace Banner {
   } & React.HTMLAttributes<HTMLDivElement>;
 }
 
-function Banner(props: Banner.Props): JSX.Element {
-  const divProps: Partial<Banner.Props> = { ...props };
+function MyBanner(props: MyBanner.Props): JSX.Element {
+  const divProps: Partial<MyBanner.Props> = { ...props };
   // delete divProps.message;
   delete divProps.display;
   delete divProps.severity;
@@ -26,43 +25,43 @@ function Banner(props: Banner.Props): JSX.Element {
 
   const display: boolean = props.display == null ? true : props.display;
 
-  let icon: IconProp | undefined;
+  let BannerIcon: IconElement | undefined;
   if (props.severity === "danger") {
-    icon = "times-circle";
+    BannerIcon = CommonIcons.Error;
   }
   else if (props.severity === "warning") {
-    icon = "exclamation-triangle";
+    BannerIcon = CommonIcons.Warning;
   }
   else if (props.severity === "info") {
-    icon = "info-circle";
+    BannerIcon = CommonIcons.Info;
   }
   else if (props.severity === "success") {
-    icon = "check-circle";
+    BannerIcon = CommonIcons.Success;
   }
 
   return (
     <div {...divProps} className={classNames(
       props.className,
-      "banner rounded p-3",
+      "banner rounded my-1 p-3",
       "bg-" + props.severity,
-      "text-" + (props.severity === "warning" ? "black" : "light"),
+      "text-" + ([ "warning", "info" ].includes(props.severity ?? "") ? "black" : "light"),
       { "d-none": !display }
     )}>
       <div className={classNames(
-        "banner-title flex-grow-1 d-flex align-items-center",
+        "banner-title flex-grow-1 center-y",
       )}>
         <div>
-          {icon != null
-            ? <FontAwesomeIcon icon={icon} className="fa-lg mr-3" />
+          {BannerIcon != null
+            ? <BannerIcon className="fa-lg me-2" />
             : ("")
           }
         </div>
         <div className="flex-grow-1">
           {props.title}
         </div>
-        <div className="ml-auto">
+        <div className="ms-auto">
           {props.loading
-            ? (<Spinner animation="border" style={{ height: "1.5em", width: "1.5em" }}/>)
+            ? (<Spinner size="md"/>)
             : ("")
           }
         </div>
@@ -72,4 +71,4 @@ function Banner(props: Banner.Props): JSX.Element {
   );
 }
 
-export default Banner;
+export default MyBanner;

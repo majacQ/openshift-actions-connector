@@ -1,7 +1,8 @@
 import React from "react";
-import { IconProp } from "@fortawesome/fontawesome-svg-core";
-import { Button } from "react-bootstrap";
-import BtnBody from "./fa-btn-body";
+import { Button } from "@patternfly/react-core";
+import { CheckIcon, CopyIcon, CrossIcon } from "@patternfly/react-icons";
+import BtnBody from "./btn-body";
+import { IconElement } from "../util/icons";
 
 interface CopyBtnProps extends React.HTMLAttributes<HTMLButtonElement> {
   copyLabel?: string,
@@ -22,19 +23,19 @@ export default class CopyToClipboardBtn extends React.Component<CopyBtnProps, Co
     };
   }
 
-  render() {
+  override render() {
     let text: string;
-    let icon: IconProp;
+    let icon: IconElement;
     if (this.state.copyState === "success") {
       text = "Copied";
-      icon = "check";
+      icon = CheckIcon;
     }
     else if (this.state.copyState === "failed") {
-      icon = "cross";
+      icon = CrossIcon;
       text = "Copy Failed";
     }
     else {
-      icon = "copy";
+      icon = CopyIcon;
       text = this.props.copyLabel ?? "Copy";
     }
 
@@ -48,7 +49,6 @@ export default class CopyToClipboardBtn extends React.Component<CopyBtnProps, Co
     return (
       <Button
         title="Copy"
-        className="copy-btn"
         {...childBtnProps}
         onClick={() => this.onCopy()}>
         <BtnBody icon={icon} text={renderText ? text : undefined} />

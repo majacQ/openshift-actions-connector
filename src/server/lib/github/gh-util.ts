@@ -2,13 +2,16 @@ import { Octokit } from "@octokit/core";
 import { createAppAuth } from "@octokit/auth-app";
 import { paginateRest, PaginateInterface } from "@octokit/plugin-paginate-rest";
 import sodium from "tweetsodium";
+import fetch from "node-fetch";
 
 import Log from "server/logger";
-import { GitHubAppAuthData, GitHubOAuthResponse, GitHubRepo, GitHubRepoId, GitHubUserData, RepoSecretsPublicKey } from "common/types/gh-types";
+import {
+  GitHubAppAuthData, GitHubUserOAuth, GitHubRepoId, GitHubUserDetails,
+  RepoSecretsPublicKey, GitHubUserDetailsWithOAuth, GitHubContentFile, GitHubFileLocation,
+} from "common/types/gh-types";
 import HttpConstants from "common/http-constants";
-import fetch from "node-fetch";
-import { throwIfError } from "server/util/server-util";
-import { AuthenticationApi } from "@kubernetes/client-node";
+import { getFriendlyHTTPError, throwIfError } from "server/util/server-util";
+import UserInstallation from "./user-app-installation";
 
 export async function getGitHubHostname(): Promise<string> {
   return "github.com";
@@ -87,20 +90,23 @@ export async function createActionsSecret(
     "PUT /repos/{owner}/{repo}/actions/secrets/{secret_name}", {
       owner: repo.owner,
       repo: repo.name,
-      /* eslint-disable camelcase */
       secret_name: secretName,
       encrypted_value: secretEncrypted,
       key_id: repoPublicKey.key_id,
-      /* eslint-enable camelcase */
     }
   );
 
   Log.info(`Successfully created ${secretName} in ${repo.owner}/${repo.name}`);
+
+
 }
 
 export async function exchangeCodeForUserData(
   client_id: string, client_secret: string, oauthCode: string
-): Promise<GitHubUserData> {
+): Promise<GitHubUserDetailsWithOAuth> {
+
+  // https://docs.github.com/en/developers/apps/building-oauth-apps/authorizing-oauth-apps#web-application-flow
+
   const githubReqBody = JSON.stringify({
     client_id,
     client_secret,
@@ -111,17 +117,17 @@ export async function exchangeCodeForUserData(
   // https://docs.github.com/en/developers/apps/identifying-and-authorizing-users-for-github-apps#response
   const oauthRes = await fetch("https://github.com/login/oauth/access_token", {
     method: "POST",
-    headers: HttpConstants.getJSONContentHeaders(githubReqBody),
+    headers: HttpConstants.getJSONHeadersForReq(githubReqBody),
     body: githubReqBody,
   });
 
   await throwIfError(oauthRes);
 
-  const oauthData: GitHubOAuthResponse = await oauthRes.json();
+  const oauthData: GitHubUserOAuth = await oauthRes.json();
 
   const userDataRes = await fetch(
     "https://api.github.com/user",
-    { headers: { Authorization: `token ${oauthData.access_token} ` } }
+    { headers: { Authorization: `token ${oauthData.access_token}` } }
   );
 
   if (!userDataRes.ok) {
@@ -130,6 +136,75 @@ export async function exchangeCodeForUserData(
     throw new Error(err.message);
   }
 
-  const userData: GitHubUserData = await userDataRes.json();
-  return userData;
+  const userData: GitHubUserDetails = await userDataRes.json();
+  return {
+    ...userData,
+    ...oauthData,
+  };
+}
+
+export async function getFileContentsFromGitHub(
+  installation: UserInstallation,
+  fileLocation: GitHubFileLocation,
+  throwIfMissing: true,
+): Promise<{
+  contents: string,
+  sha: string,
+}>;
+
+export async function getFileContentsFromGitHub(
+  installation: UserInstallation,
+  fileLocation: GitHubFileLocation,
+  throwIfMissing: false,
+): Promise<{
+  contents: string,
+  sha: string,
+} | undefined>;
+
+export async function getFileContentsFromGitHub(
+  installation: UserInstallation,
+  fileLocation: GitHubFileLocation,
+  throwIfMissing: boolean,
+// ): Promise<GitHubContentFile | undefined> {
+): Promise<{
+  contents: string,
+  sha: string,
+} | undefined> {
+  try {
+    Log.info(`Fetching file from GitHub ${fileLocation.owner}/${fileLocation.repo}/${fileLocation.path}@${fileLocation.ref}`);
+
+    const fileContentRes = (await installation.octokit.request("GET /repos/{owner}/{repo}/contents/{path}", {
+      ...fileLocation,
+      // https://docs.github.com/en/rest/reference/repos#custom-media-types-for-repository-contents
+      mediaType: {
+        format: "json",
+      },
+    })).data;
+
+    const file = fileContentRes as GitHubContentFile;
+
+    // if (format === "raw") {
+      // since we specified mediatype=raw
+      // the .data field is the file contents
+      // but the typing does not reflect this.
+      // const fileContents = fileContentRes as unknown as string;
+      // return fileContents;
+    // }
+
+    const contents = Buffer.from(file.content, "base64").toString("utf-8");
+    Log.info(`Fetched file starts with "${contents.substring(0, 16)}"`);
+    return {
+      contents,
+      sha: file.sha,
+    };
+  }
+  catch (err) {
+		// 404 is expected, it means the file does not exist
+		if (err.status !== 404 || throwIfMissing) {
+			throw getFriendlyHTTPError(err);
+		}
+		return undefined;
+	}
+
+
 }

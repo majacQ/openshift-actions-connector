@@ -1,63 +1,179 @@
 import express from "express";
 
 import ApiEndpoints from "common/api-endpoints";
-import { send405, sendError } from "server/util/send-error";
 import { exchangeCodeForAppConfig } from "server/lib/github/gh-app-config";
 import Log from "server/logger";
-import { sendSuccessStatusJSON } from "server/util/server-util";
 import ApiRequests from "common/api-requests";
 import ApiResponses from "common/api-responses";
-import GitHubApp from "server/lib/github/gh-app";
-import User from "server/lib/user";
 import { exchangeCodeForUserData } from "server/lib/github/gh-util";
 import StateCache from "server/lib/state-cache";
+import { send405 } from "server/express-extends";
 import { GitHubUserType } from "common/types/gh-types";
+import GitHubAppSerializer from "server/lib/github/gh-app-serializer";
 
 const router = express.Router();
 
 const stateCache = new StateCache();
 
-// const appsInProgress = new Map<string, { iat: number, ownerId: string, appId: string }>();
-
-// .get(async (req, res, next) => {
-//   const state = uuid();
-//   creationsInProgress.set(state, { iat: Date.now() /* sessionID: req.sessionID */ });
-//   const manifest = getAppManifest(getServerUrl(req, false), getClientUrl(req));
-
-//   const resBody: ApiResponses.CreateAppResponse = {
-//     manifest, state,
-//   };
-
-//   Log.info(`Heres the manifest`, manifest);
-
-//   return res
-//     // this page is not cached or you run into issues with state reuse if you use back/fwd buttons
-//     .header(HttpConstants.Headers.CacheControl, "no-store")
-//     .json(resBody);
-// })
-
 router.route(ApiEndpoints.Setup.SetCreateAppState.path)
   .post(async (req, res, next) => {
-    const state: string | undefined = req.body.state;
-    if (!state) {
-      return sendError(res, 400, `Required parameter "state" missing from request body`);
+    const user = await req.getUserOr401();
+    if (!user) {
+      return undefined;
     }
 
-    stateCache.add(req.sessionID, req.body.state);
+    if (!user.isAdmin) {
+      return res.status(403).sendError(403, `Only administrators can add GitHub apps.`);
+    }
 
-    return sendSuccessStatusJSON(res, 201);
+    const state: string | undefined = req.body.state;
+    if (!state) {
+      return res.sendError(400, `Required parameter "state" missing from request body`);
+    }
+
+    stateCache.add(user.uid, req.body.state);
+
+    return res.sendStatus(201);
   });
 
-function createSessionSetupData(req: express.Request, appId: number): void {
-  Log.info(`Saving session setup data appId=${appId}`);
-
-  req.session.setupData = {
-    githubAppId: appId,
-  };
-}
-
 router.route(ApiEndpoints.Setup.CreatingApp.path)
-  /*
+  .post(async (
+    req: express.Request<any, any, ApiRequests.GitHubOAuthCallbackData>,
+    res: express.Response<ApiResponses.CreatingAppResponse>,
+    next
+  ) => {
+    const user = await req.getUserOr401();
+    if (!user) {
+      return undefined;
+    }
+
+    if (!user.isAdmin) {
+      return res.status(403).sendError(403, `Only administrators can add GitHub apps.`);
+    }
+
+    const code = req.body.code;
+    const state = req.body.state;
+
+    if (!code) {
+      return res.sendError(400, `Required parameter "code" missing from request body`);
+    }
+    if (!state) {
+      return res.sendError(400, `Required parameter "state" missing from request body`);
+    }
+
+    if (!stateCache.validate(user.uid, state)) {
+      return res.sendError(400, `State parameter "${state}" is invalid or expired`);
+    }
+
+    const appConfig = await exchangeCodeForAppConfig(code);
+
+    const newApp = await GitHubAppSerializer.create(appConfig);
+    Log.info(`Saved app ${appConfig.name}`);
+
+    await user.addGitHubUserInfo({
+      email: newApp.config.owner.email ?? undefined,
+      html_url: newApp.config.owner.html_url,
+      id: newApp.config.owner.id,
+      name: newApp.config.owner.login,
+      type: newApp.config.owner.type as GitHubUserType,
+    }, true);
+
+    user.addOwnsApp(newApp);
+
+    const appInstallUrl = appConfig.html_url + "/installations/new";
+    // const appInstallUrl = `https://github.com/settings/apps/${appConfig.slug}/installations`;
+
+    return res.status(201).json({
+      success: true,
+      message: `Successfully saved ${appConfig.name}`,
+      appInstallUrl,
+      appName: appConfig.name,
+    });
+  })
+  .all(send405([ /* "GET", */ "POST" ]));
+
+router.route(ApiEndpoints.Setup.PreInstallApp.path)
+  .post(async (req: express.Request<any, any, ApiRequests.PreInstallApp>, res, next) => {
+    const user = await req.getUserOr401();
+    if (!user) {
+      return undefined;
+    }
+
+    user.startInstallingApp(req.body.appId);
+    return res.sendStatus(204);
+  })
+  .all(send405([ "POST" ]));
+
+router.route(ApiEndpoints.Setup.PostInstallApp.path)
+  .post(async (req: express.Request<any, any, ApiRequests.PostInstall>, res, next) => {
+    // const appIdStr = req.body.appId;
+    const installationIdStr = req.body.installationId;
+    const oauthCode = req.body.oauthCode;
+    // const setupAction = req.body.setupAction;
+
+    Log.info(`Post-install`);
+
+    const installationId = Number(installationIdStr);
+    if (Number.isNaN(installationId)) {
+      return res.sendError(400, `Installation ID "${installationId}" is not a number`);
+    }
+
+    const user = await req.getUserOr401();
+    if (!user) {
+      return undefined;
+    }
+
+    const appId = user.getInstallingApp();
+    if (appId == null) {
+      return res.sendError(400, `Missing new installation app ID. Please restart the app installation process.`);
+    }
+
+    Log.info(`Post install is for app ${appId}`);
+
+    const appInstalled = await GitHubAppSerializer.load(appId);
+
+    if (appInstalled == null) {
+      return res.sendError(500, `Failed to look up GitHub app "${appId}". Please restart the app setup process.`);
+    }
+
+    if (!appInstalled.config.client_id || !appInstalled.config.client_secret) {
+      throw new Error(`Failed to load OAuth data for app ${appInstalled.config.name}`);
+    }
+
+    const userData = await exchangeCodeForUserData(
+      appInstalled.config.client_id,
+      appInstalled.config.client_secret,
+      oauthCode,
+    );
+
+    let addGitHubUserInfo = user.githubUserInfo == null;
+    if (user.githubUserInfo && userData.id !== user.githubUserInfo.id) {
+      addGitHubUserInfo = true;
+      Log.warn(
+        `Received installation for user ${userData.id}, `
+        + `but user already had GitHub user info with ID ${user.githubUserInfo.id}`
+      );
+    }
+
+    if (addGitHubUserInfo) {
+      await user.addGitHubUserInfo({
+        id: userData.id,
+        name: userData.login,
+        email: userData.email ?? undefined,
+        type: userData.type as GitHubUserType,
+        html_url: userData.html_url,
+      }, true);
+    }
+
+    await user.addInstallation({ appId, installationId }, true);
+
+    return res.sendStatus(201);
+  })
+  .all(send405([ "POST" ]));
+
+export default router;
+
+/*
   .get(async (req, res, next) => {
     const memento = await GitHubAppMemento.tryLoad(req.sessionID);
     if (!memento) {
@@ -104,110 +220,3 @@ router.route(ApiEndpoints.Setup.CreatingApp.path)
     return res.send(appWSecretsString);
   })
   */
-  .post(async (
-    req: express.Request<any, any, ApiRequests.OAuthCallbackData>,
-    res: express.Response<ApiResponses.CreatingAppResponse>,
-    next
-  ) => {
-    const code = req.body.code;
-    const state = req.body.state;
-
-    if (!code) {
-      return sendError(res, 400, `Required parameter "code" missing from request body`);
-    }
-    if (!state) {
-      return sendError(res, 400, `Required parameter "state" missing from request body`);
-    }
-
-    if (!stateCache.validate(req.sessionID, state)) {
-      return sendError(res, 400, `State parameter "${state}" is invalid or expired`);
-    }
-
-    const appConfig = await exchangeCodeForAppConfig(code);
-
-    createSessionSetupData(req, appConfig.id);
-
-    await GitHubApp.create(appConfig);
-
-    Log.info(`Saved app ${appConfig.name} into secret`);
-
-    const appInstallUrl = appConfig.html_url + "/installations/new";
-    // const appInstallUrl = `https://github.com/settings/apps/${appConfig.slug}/installations`;
-
-    // appsInProgress.set(req.sessionID, { iat: Date.now(), appId, ownerId });
-
-    return res.json({
-      success: true,
-      message: `Successfully saved ${appConfig.name}`,
-      appInstallUrl,
-    });
-  })
-  .all(send405([ /* "GET", */ "POST" ]));
-
-router.route(ApiEndpoints.Setup.PreInstallApp.path)
-  .post(async (req: express.Request<any, any, ApiRequests.PreInstallApp>, res, next) => {
-    createSessionSetupData(req, req.body.appId);
-    return sendSuccessStatusJSON(res, 204);
-  })
-  .all(send405([ "POST" ]));
-
-router.route(ApiEndpoints.Setup.PostInstallApp.path)
-  .post(async (req: express.Request<any, any, ApiRequests.PostInstall>, res, next) => {
-    // const appIdStr = req.body.appId;
-    const installationIdStr = req.body.installationId;
-    const oauthCode = req.body.oauthCode;
-    // const setupAction = req.body.setupAction;
-
-    Log.info(`Post-install`);
-
-    const installationId = Number(installationIdStr);
-    if (Number.isNaN(installationId)) {
-      return sendError(res, 400, `Installation ID "${installationId}" is not a number`);
-    }
-
-    const appId = req.session.setupData?.githubAppId;
-    if (appId == null) {
-      return sendError(res, 400, `No App ID for session. Please restart the app setup process.`);
-    }
-
-    Log.info(`Post install is for app ${appId}`);
-
-    const appInstalled = await GitHubApp.load(appId);
-
-    if (appInstalled == null) {
-      return sendError(
-        res, 500,
-        `Failed to look up GitHub app "${appId}". Please restart the app setup process.`
-      );
-    }
-
-    if (!appInstalled.config.client_id || !appInstalled.config.client_secret) {
-      throw new Error(`Failed to load OAuth data for app ${appInstalled.config.name}`);
-    }
-
-    const userData = await exchangeCodeForUserData(
-      appInstalled.config.client_id,
-      appInstalled.config.client_secret,
-      oauthCode
-    );
-
-    req.session.setupData = undefined;
-
-    req.session.data = {
-      githubUserId: userData.id,
-    };
-
-    await User.create({
-      id: userData.id,
-      name: userData.login,
-      type: userData.type as GitHubUserType,
-    }, undefined, {
-      appId,
-      installationId,
-    });
-
-    return sendSuccessStatusJSON(res, 201);
-  })
-  .all(send405([ "POST" ]));
-
-export default router;

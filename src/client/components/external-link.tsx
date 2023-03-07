@@ -1,31 +1,32 @@
-import { IconProp } from "@fortawesome/fontawesome-svg-core";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import classNames from "classnames";
+import { IconElement } from "../util/icons";
 
-export function ExternalLink({
+export function NewTabLink({
   href, children, className, title, icon,
 }: {
-    href: string,
-    children?: React.ReactNode,
+  href: string,
+  children?: React.ReactNode,
+  className?: string,
+  title?: string,
+
+  icon?: {
+    position: "left" | "right",
+    Icon: IconElement,
     className?: string,
-    title?: string,
+  },
+}) {
 
-    icon?: {
-      position: "left" | "right",
-      icon: IconProp,
-    },
-  }) {
-
-  const marginSize = "0.6em";
+  // const displayClass = icon != null ? "center-y" : "d-inline";
 
   return (
     <a href={href}
       target="_blank" rel="noopener noreferrer"
-      className={"external-link font-weight-bold " + (className ?? "")}
+      className={classNames("b", className)}
       title={title != null ? title : href}
     >
-      {icon?.position === "left" ? <FontAwesomeIcon icon={icon.icon} style={{ marginRight: marginSize }} /> : ("")}
+      {icon?.position === "left" ? <icon.Icon className={classNames("me-2", icon.className)} /> : ("")}
       {children}
-      {icon?.position === "right" ? <FontAwesomeIcon icon={icon.icon} style={{ marginLeft: marginSize }} /> : ("")}
+      {icon?.position === "right" ? <icon.Icon className={classNames("ms-2", icon.className)} /> : ("")}
     </a>
   );
 }

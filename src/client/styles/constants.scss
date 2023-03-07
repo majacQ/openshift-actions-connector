@@ -1,24 +1,12 @@
-@forward "~bootstrap/scss/bootstrap";
+@import "~@patternfly/patternfly/sass-utilities/all";
 
-// https://getbootstrap.com/docs/4.0/getting-started/theming/#sass-options
+// $body-bg: #121215;
+// $body-fg: white;
+$body-bg: $pf-global--BackgroundColor--200;
+$body-fg: $pf-global--Color--100;
 
-// plug https://getbootstrap.com/docs/4.0/getting-started/theming/#all-colors
-// into
-// https://material.io/design/color/the-color-system.html#tools-for-picking-colors
-// use the 700 for foreground on dark theme
-$primary: #0278ee;
-$info: #127B87;
-// $success: #28a745;
-$success: #208337;
-$success-light: #27a745;
-// $light: #f8f9fa;
-
-$body-bg: #121215;
-$body-fg: white;
-
-$card-bg: #2d2d30;
-
-@import "~bootstrap/scss/bootstrap";
+// @import "~bootstrap/scss/bootstrap";
+@import "~bootstrap/scss/bootstrap-utilities";
 
 /* https://www.redhat.com/en/about/brand/standards/color */
 $rh-red: #e00;
@@ -41,3 +29,4 @@ $breakpoint-xl: 1200px;
 
 $main-vertical-padding: 2rem;
 $navbar-height: 4rem;
+$pf-global--BorderRadius--md: 0.5rem;

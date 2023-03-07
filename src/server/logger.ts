@@ -56,7 +56,7 @@ function getLogger(): log4js.Logger {
   _logger.level = "debug";
 
   _logger.info("Logger initialized");
-  _logger.info(`Logging to "${logFilePath}"`);
+  _logger.info(`Logging to ${logFilePath}`);
   return _logger;
 }
 
@@ -95,7 +95,8 @@ export function getLoggingMiddleware(): any {
         fmt += `\nRequest body was:\n${JSON.stringify(bodyCopy)}`;
       }
 
-      fmt += `\ncookie: ${JSON.stringify(req.headers.cookie)}`;
+      // fmt += `\ncookie: ${JSON.stringify(req.headers.cookie)}`;
+      // fmt += `\nsession: ${JSON.stringify(req.session)}`;
       return format(fmt);
     },
   });

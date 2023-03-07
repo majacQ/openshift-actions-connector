@@ -1,27 +1,28 @@
 import React from "react";
-import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import classNames from "classnames";
-import { Button, Card } from "react-bootstrap";
-
-import { ExternalLink } from "./external-link";
-import BtnBody from "./fa-btn-body";
+import {
+  Button, Card, CardTitle, CardBody,
+} from "@patternfly/react-core";
+import { NewTabLink } from "./external-link";
+import BtnBody from "./btn-body";
+import { IconElement } from "../util/icons";
 
 export default function appPageCard(props: {
-    header: string,
-    buttons: {
-      href: string,
-      icon: IconProp,
-      text: string,
-    }[],
-    children: React.ReactNode,
+  header: string,
+  buttons: {
+    href: string,
+    icon: IconElement,
+    text: string,
+  }[],
+  children: React.ReactNode,
 }): JSX.Element {
   return (
     <Card>
-      <Card.Title>
+      <CardTitle>
         <div>
           {props.header}
         </div>
-        <div className="ml-auto"></div>
+        <div className="ms-auto"></div>
         <div className="btn-line">
           {
             props.buttons.map((btnProps, i) => {
@@ -30,18 +31,18 @@ export default function appPageCard(props: {
                   className={classNames("flex-grow-1")}
                   title={btnProps.text}
                 >
-                  <ExternalLink href={btnProps.href}>
+                  <NewTabLink href={btnProps.href}>
                     <BtnBody icon={btnProps.icon} text={btnProps.text} />
-                  </ExternalLink>
+                  </NewTabLink>
                 </Button>
               );
             })
           }
         </div>
-      </Card.Title>
-      <Card.Body>
+      </CardTitle>
+      <CardBody>
         {props.children}
-      </Card.Body>
+      </CardBody>
     </Card>
   );
 }
